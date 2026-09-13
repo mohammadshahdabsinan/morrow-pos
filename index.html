@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Xtra Zone Billing</title>
+    <link rel="stylesheet" href="styles.css?v=20260913-controls" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-wrap">
+          <div class="brand-mark" aria-label="Xtra Zone">XZ</div>
+          <div>
+            <div id="business-name-display" class="brand-name">Your Business Name</div>
+            <div class="brand-tag">Xtra Zone Billing · Billing Software</div>
+          </div>
+        </div>
+
+        <div class="topbar-tools">
+          <span id="country-status" class="country-status">India</span>
+          <span class="status-pill"><span class="status-dot"></span>Saved locally</span>
+          <button class="ghost-btn" id="new-bill" type="button">+ New bill</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="main-panel">
+          <nav class="main-nav" aria-label="POS sections">
+            <button class="nav-btn active" data-view="sell" type="button">Dashboard</button>
+            <button class="nav-btn" data-view="catalog" type="button">Catalog</button>
+            <button class="nav-btn" data-view="settings" type="button">Business settings</button>
+            <button class="nav-btn" data-view="tools" type="button">Data tools</button>
+            <button class="nav-btn" data-view="transactions" type="button">Transactions</button>
+          </nav>
+
+          <div class="view-title-row">
+            <h1 id="view-title">Dashboard</h1>
+            <div class="shift-badge">Open shift</div>
+          </div>
+
+          <div class="view-panel" data-panel="sell">
+
+          <div class="toolbar">
+            <label class="search-wrap">
+              <span>Search</span>
+              <input id="search-input" type="search" placeholder="Search products..." />
+            </label>
+          </div>
+
+          <div class="card-block">
+            <div class="card-head row-split">
+              <h2>Items</h2>
+              <div class="header-controls">
+                <label class="compact-select">Sort <select id="dashboard-product-sort"><option value="name-asc">Name A-Z</option><option value="name-desc">Name Z-A</option><option value="price-asc">Price low-high</option><option value="price-desc">Price high-low</option><option value="stock-asc">Stock low-high</option><option value="stock-desc">Stock high-low</option></select></label>
+                <div class="header-actions">
+                  <button class="inline-btn" id="go-to-cart" type="button">Go to cart</button>
+                  <button class="inline-btn" id="sell-catalog-link" data-view="catalog" type="button">Manage catalog</button>
+                </div>
+              </div>
+            </div>
+            <div id="dashboard-category-list" class="chip-list" aria-label="Dashboard category filter"></div>
+            <div id="product-grid" class="product-grid"></div>
+          </div>
+          </div>
+
+          <div class="view-panel hidden" data-panel="catalog">
+          <div class="card-block">
+            <div class="card-head row-split">
+              <h2>Categories</h2>
+              <div class="header-controls">
+                <label class="compact-select">Sort <select id="category-sort"><option value="name-asc">Name A-Z</option><option value="name-desc">Name Z-A</option></select></label>
+                <button class="inline-btn" id="toggle-category-form" type="button">+ Add</button>
+              </div>
+            </div>
+
+            <form id="category-form" class="inline-form hidden">
+              <input id="category-name" type="text" maxlength="30" placeholder="New category" required />
+              <button type="submit">Save</button>
+            </form>
+
+            <div id="category-list" class="catalog-category-list" aria-label="Product categories"></div>
+          </div>
+
+          <div class="card-block">
+            <div class="card-head row-split">
+              <h2>Products</h2>
+              <div class="header-controls">
+                <label class="compact-select">Sort <select id="catalog-product-sort"><option value="name-asc">Name A-Z</option><option value="name-desc">Name Z-A</option><option value="price-asc">Price low-high</option><option value="price-desc">Price high-low</option><option value="stock-asc">Stock low-high</option><option value="stock-desc">Stock high-low</option></select></label>
+                <button class="inline-btn" id="toggle-product-form" type="button">+ Add item</button>
+              </div>
+            </div>
+
+            <form id="product-form" class="stacked-form hidden">
+              <input id="product-id" type="hidden" />
+              <div class="field-grid">
+                <label>
+                  <span>Name</span>
+                  <input id="product-name" type="text" required placeholder="e.g. Matcha Latte" />
+                </label>
+                <label>
+                  <span>Category</span>
+                  <select id="product-category"></select>
+                </label>
+                <label>
+                  <span>Price</span>
+                  <input id="product-price" type="number" min="1" step="1" required value="100" />
+                </label>
+                <label>
+                  <span>Stock</span>
+                  <input id="product-stock" type="number" min="0" step="1" value="0" placeholder="Optional" />
+                </label>
+              </div>
+              <button id="product-submit-button" type="submit">Add product</button>
+            </form>
+            <div id="catalog-product-list" class="catalog-product-list"></div>
+          </div>
+          </div>
+
+          <div class="view-panel hidden" data-panel="settings">
+          <div class="card-block">
+            <div class="card-head row-split">
+              <h2>Business settings</h2>
+            </div>
+
+            <form id="settings-form" class="stacked-form">
+              <div class="field-grid">
+                <label>
+                  <span>Business name</span>
+                  <input id="business-name" type="text" maxlength="100" value="Your Business Name" placeholder="e.g. Sharma General Store" />
+                </label>
+                <label>
+                  <span>Business country</span>
+                  <input id="business-country" type="text" maxlength="60" value="India" placeholder="e.g. United Arab Emirates" />
+                </label>
+                <label>
+                  <span>Number locale</span>
+                  <input id="business-locale" type="text" maxlength="20" value="en-IN" placeholder="e.g. en-US" />
+                </label>
+                <label>
+                  <span>Currency</span>
+                  <input id="currency-symbol" type="text" maxlength="10" value="Rs" />
+                </label>
+                <label>
+                  <span>Tax label</span>
+                  <input id="tax-label" type="text" maxlength="20" value="Tax" />
+                </label>
+                <label class="checkbox-field">
+                  <span>Apply tax</span>
+                  <input id="tax-enabled" type="checkbox" />
+                </label>
+                <label>
+                  <span>Tax rate (%)</span>
+                  <input id="tax-rate" type="number" min="0" max="100" step="0.01" value="0" />
+                </label>
+              </div>
+              <button type="submit">Save settings</button>
+            </form>
+          </div>
+          </div>
+
+          <div class="view-panel hidden" data-panel="tools">
+          <div class="card-block">
+            <div class="card-head row-split">
+              <div>
+                <p class="eyebrow">Data tools</p>
+                <h2>Backup & reports</h2>
+              </div>
+              <span class="data-note">Stored on this device</span>
+            </div>
+            <div class="data-actions">
+              <button class="inline-btn" id="export-data" type="button">Export backup</button>
+              <button class="inline-btn" id="import-data-button" type="button">Import backup</button>
+              <input id="import-data" type="file" accept="application/json" hidden />
+            </div>
+          </div>
+          <div class="card-block danger-block">
+            <div class="card-head row-split">
+              <div>
+                <p class="eyebrow">Local storage</p>
+                <h2>Clear this workspace</h2>
+              </div>
+            </div>
+            <p class="helper-text">This removes all products, categories, bills, and transactions from this browser.</p>
+            <button class="ghost-btn" id="reset-data" type="button">Clear all local data</button>
+          </div>
+          </div>
+
+          <div class="view-panel hidden" data-panel="transactions">
+          <div class="card-block">
+            <div class="card-head row-split">
+              <div>
+                <p class="eyebrow">Completed transactions</p>
+                <h2>Sales history</h2>
+              </div>
+              <select id="sales-filter" class="sales-filter" aria-label="Filter sales history">
+                <option value="all">All sales</option>
+                <option value="today">Today</option>
+              </select>
+            </div>
+            <div id="sales-history" class="sales-history"></div>
+          </div>
+          </div>
+        </section>
+
+        <aside id="bill-panel" class="bill-panel">
+          <div class="bill-header row-split">
+            <div>
+              <p class="eyebrow">Current order</p>
+              <h2>New bill</h2>
+            </div>
+            <span id="bill-number" class="bill-number">#0001</span>
+          </div>
+
+          <div class="customer-card">
+            <div class="customer-avatar">C</div>
+            <div>
+              <strong>Walk-in customer</strong>
+              <span>Quick sale</span>
+            </div>
+          </div>
+
+          <form id="custom-item-form" class="custom-item-form">
+            <div class="custom-item-title">Quick item</div>
+            <div class="custom-item-fields">
+              <input id="custom-item-name" type="text" placeholder="Item or service name" required />
+              <input id="custom-item-price" type="number" min="0" step="0.01" placeholder="Price" required />
+              <button type="submit" title="Add item to bill">Add</button>
+            </div>
+          </form>
+
+          <div id="bill-items" class="bill-items"></div>
+
+          <div class="summary-block">
+            <div class="summary-row">
+              <span>Subtotal</span>
+              <strong id="subtotal">Rs 0</strong>
+            </div>
+            <div class="summary-row">
+              <span id="tax-label-text">Tax</span>
+              <strong id="tax">Rs 0</strong>
+            </div>
+            <div class="summary-row total-row">
+              <span>Total</span>
+              <strong id="total">Rs 0</strong>
+            </div>
+          </div>
+
+          <div class="payment-row">
+            <span>Payment</span>
+            <select id="payment-method">
+              <option>Cash</option>
+              <option>Card</option>
+              <option>Bank transfer</option>
+              <option>UPI</option>
+            </select>
+          </div>
+
+          <button id="complete-sale" class="complete-btn" type="button">
+            <span>Complete sale</span>
+            <strong id="button-total">Rs 0</strong>
+          </button>
+
+          <div class="stats-block">
+            <div>
+              <span>Orders</span>
+              <strong id="order-count">0</strong>
+            </div>
+            <div>
+              <span>Revenue</span>
+              <strong id="today-revenue">Rs 0</strong>
+            </div>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <script src="app.js?v=20260913-business"></script>
+  </body>
+</html>
