@@ -1,6 +1,6 @@
-// Firebase Configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyCIjXz3KM826ICNpPysUU90Vy9PsrGRPIM",
+// Firebase Configuration - Loaded from global window object
+// This allows secure config injection without hardcoding secrets
+const firebaseConfig = window.FIREBASE_CONFIG || {
   authDomain: "xtra-zone-billing.firebaseapp.com",
   projectId: "xtra-zone-billing",
   storageBucket: "xtra-zone-billing.firebasestorage.app",
@@ -9,8 +9,13 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const firebaseApp = firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore(firebaseApp);
+let firebaseApp, db;
+try {
+  firebaseApp = firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore(firebaseApp);
+} catch (error) {
+  console.warn('Firebase initialization failed - offline mode only', error);
+}
 
 const STORAGE_KEY = 'morrow-pos-v2';
 const FIREBASE_COLLECTION = 'shops';

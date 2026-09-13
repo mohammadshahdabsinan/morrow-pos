@@ -1,0 +1,30 @@
+# Firebase Configuration - NEVER COMMIT
+config.js
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# System Files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Sensitive Files
+*.pem
+*.key
+*.json
+!package.json

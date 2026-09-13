@@ -1,0 +1,16 @@
+// Firebase Configuration
+// INSTRUCTIONS:
+// 1. Copy this file and rename to "config.js" (remove .example)
+// 2. Get your API Key from: Firebase Console → Project Settings → Your apps → Web
+// 3. Replace YOUR_API_KEY with your actual key
+// 4. NEVER commit config.js to git - it's in .gitignore
+// 5. Each developer/device creates their own config.js locally
+
+window.FIREBASE_CONFIG = {
+  apiKey: "YOUR_API_KEY_HERE",
+  authDomain: "xtra-zone-billing.firebaseapp.com",
+  projectId: "xtra-zone-billing",
+  storageBucket: "xtra-zone-billing.firebasestorage.app",
+  messagingSenderId: "222132779514",
+  appId: "1:222132779514:web:3e84c5e1b5d8b8ab3a8c43"
+};
