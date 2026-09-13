@@ -9,10 +9,15 @@ const firebaseConfig = window.FIREBASE_CONFIG || {
 };
 
 // Initialize Firebase
-let firebaseApp, db;
+let db = null;
 try {
-  firebaseApp = firebase.initializeApp(firebaseConfig);
-  db = firebase.firestore(firebaseApp);
+  if (window.FIREBASE_CONFIG && window.firebase) {
+    firebase.initializeApp(window.FIREBASE_CONFIG);
+    db = firebase.firestore();
+    console.log('✓ Firebase initialized successfully');
+  } else {
+    console.warn('Firebase config or SDK not loaded - offline mode only');
+  }
 } catch (error) {
   console.warn('Firebase initialization failed - offline mode only', error);
 }
@@ -125,7 +130,7 @@ function saveState() {
 }
 
 async function syncToFirebase() {
-  if (!isOnline || isSyncing) return;
+  if (!isOnline || isSyncing || !db) return;
 
   isSyncing = true;
   updateSyncStatus();
@@ -136,6 +141,7 @@ async function syncToFirebase() {
       lastSyncedAt: new Date().toISOString(),
       deviceId: getDeviceId()
     });
+    console.log('✓ Data synced to Firebase');
     updateSyncStatus();
   } catch (error) {
     console.error('Firebase sync error:', error);
@@ -146,12 +152,13 @@ async function syncToFirebase() {
 }
 
 async function loadFromFirebase() {
-  if (!isOnline) return null;
+  if (!isOnline || !db) return null;
 
   try {
     const doc = await db.collection(FIREBASE_COLLECTION).doc(SHOP_ID).get();
     if (doc.exists) {
       const data = doc.data();
+      console.log('✓ Data loaded from Firebase');
       return {
         settings: data.settings || defaultState.settings,
         categories: Array.isArray(data.categories) ? data.categories : [],
