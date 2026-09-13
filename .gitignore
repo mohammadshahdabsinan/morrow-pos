@@ -1,5 +1,5 @@
-# Firebase Configuration - NEVER COMMIT
-config.js
+# Firebase Configuration is committed for GitHub Pages deployment
+# Web API keys are meant to be public - security comes from Firestore Rules
 
 # Environment Variables
 .env
