@@ -193,17 +193,59 @@
           </div>
 
           <div class="view-panel hidden" data-panel="transactions">
+          <!-- Stats Cards -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px">
+            <div class="stat-card">
+              <div class="stat-label">Total Sales</div>
+              <div class="stat-value" id="stat-total-sales">0</div>
+              <div class="stat-subtitle">transactions</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Total Revenue</div>
+              <div class="stat-value" id="stat-total-revenue">Rs 0</div>
+              <div class="stat-subtitle">all time</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Today's Sales</div>
+              <div class="stat-value" id="stat-today-sales">0</div>
+              <div class="stat-subtitle">today</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Today's Revenue</div>
+              <div class="stat-value" id="stat-today-revenue">Rs 0</div>
+              <div class="stat-subtitle">today</div>
+            </div>
+          </div>
+
           <div class="card-block">
             <div class="card-head row-split">
               <div>
                 <p class="eyebrow">Completed transactions</p>
                 <h2>Sales history</h2>
               </div>
-              <select id="sales-filter" class="sales-filter" aria-label="Filter sales history">
-                <option value="all">All sales</option>
+            </div>
+
+            <!-- Filters -->
+            <div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap">
+              <select id="sales-filter" class="sales-filter" aria-label="Filter by date">
+                <option value="all">All time</option>
                 <option value="today">Today</option>
               </select>
+              <select id="payment-method-filter" class="sales-filter" aria-label="Filter by payment method">
+                <option value="">All payment methods</option>
+                <option value="Cash">Cash</option>
+                <option value="Card">Card</option>
+                <option value="UPI">UPI</option>
+                <option value="Check">Check</option>
+              </select>
+              <select id="transaction-status-filter" class="sales-filter" aria-label="Filter by status">
+                <option value="">All statuses</option>
+                <option value="Paid">Paid</option>
+                <option value="Pending">Pending</option>
+                <option value="Failed">Failed</option>
+              </select>
             </div>
+
             <div id="sales-history" class="sales-history"></div>
           </div>
           </div>

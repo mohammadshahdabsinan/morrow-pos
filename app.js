@@ -51,6 +51,9 @@ const defaultState = {
 const state = loadState();
 let activeCategory = 'all';
 let searchText = '';
+let filterDateRange = 'all';
+let filterPaymentMethod = '';
+let filterStatus = '';
 
 const categoryList = document.querySelector('#category-list');
 const dashboardCategoryList = document.querySelector('#dashboard-category-list');
@@ -93,7 +96,15 @@ let categorySort = 'name-asc';
 let productSort = 'name-asc';
 const salesHistory = document.querySelector('#sales-history');
 const salesFilter = document.querySelector('#sales-filter');
+const paymentMethodFilter = document.querySelector('#payment-method-filter');
+const transactionStatusFilter = document.querySelector('#transaction-status-filter');
 const importDataInput = document.querySelector('#import-data');
+
+// Stat card elements
+const statTotalSales = document.querySelector('#stat-total-sales');
+const statTotalRevenue = document.querySelector('#stat-total-revenue');
+const statTodaySales = document.querySelector('#stat-today-sales');
+const statTodayRevenue = document.querySelector('#stat-today-revenue');
 
 function loadState() {
   try {
@@ -743,19 +754,40 @@ function saleDate(sale) {
   });
 }
 
+function getFilteredSales() {
+  const today = new Date().toDateString();
+  return state.sales.filter((sale) => {
+    const dateMatch = filterDateRange !== 'today' || new Date(sale.createdAt).toDateString() === today;
+    const paymentMatch = !filterPaymentMethod || sale.paymentMethod === filterPaymentMethod;
+    const statusMatch = !filterStatus || sale.status === filterStatus;
+    return dateMatch && paymentMatch && statusMatch;
+  });
+}
+
+function renderTransactionStats() {
+  const filteredSales = getFilteredSales();
+  const today = new Date().toDateString();
+  const todaySales = state.sales.filter(s => new Date(s.createdAt).toDateString() === today);
+
+  const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
+  const todayRevenue = todaySales.reduce((sum, sale) => sum + sale.total, 0);
+
+  if (statTotalSales) statTotalSales.textContent = String(state.sales.length);
+  if (statTotalRevenue) statTotalRevenue.textContent = currency(state.sales.reduce((sum, s) => sum + s.total, 0));
+  if (statTodaySales) statTodaySales.textContent = String(todaySales.length);
+  if (statTodayRevenue) statTodayRevenue.textContent = currency(todayRevenue);
+}
+
 function renderSalesHistory() {
   if (!salesHistory) return;
 
-  const today = new Date().toDateString();
-  const visibleSales = state.sales.filter((sale) => {
-    return salesFilter.value !== 'today' || new Date(sale.createdAt).toDateString() === today;
-  });
+  const visibleSales = getFilteredSales();
 
   salesHistory.innerHTML = '';
   if (!visibleSales.length) {
     const empty = document.createElement('div');
     empty.className = 'history-empty';
-    empty.textContent = 'Completed sales will appear here.';
+    empty.textContent = 'No sales match your filters.';
     salesHistory.appendChild(empty);
     return;
   }
@@ -764,10 +796,14 @@ function renderSalesHistory() {
     const row = document.createElement('div');
     row.className = 'sale-row';
     const itemCount = getSaleItems(sale).reduce((sum, item) => sum + item.quantity, 0);
+    const statusBadge = sale.status ? `<span style="font-size:0.8rem;padding:2px 8px;border-radius:4px;background:${sale.status === 'Paid' ? '#e8f5e9' : sale.status === 'Pending' ? '#fff3cd' : '#ffebee'};color:${sale.status === 'Paid' ? '#2e7d32' : sale.status === 'Pending' ? '#856404' : '#c62828'}">${sale.status}</span>` : '';
+    const reasonText = sale.reason ? `<div style="font-size:0.85rem;color:#666;margin-top:4px">💬 ${escapeHtml(sale.reason)}</div>` : '';
+
     row.innerHTML = `
       <div>
         <strong>Sale #${String(sale.number || '').padStart(4, '0')}</strong>
-        <span>${escapeHtml(saleDate(sale))} · ${escapeHtml(sale.paymentMethod)}</span>
+        <span>${escapeHtml(saleDate(sale))} · ${escapeHtml(sale.paymentMethod)} ${statusBadge}</span>
+        ${reasonText}
       </div>
       <div class="sale-row-meta">
         <span>${itemCount} item${itemCount === 1 ? '' : 's'}</span>
@@ -965,6 +1001,14 @@ function completeSale() {
     product.stock = Math.max(0, product.stock - item.quantity);
   });
 
+  const statusChoice = window.confirm('Did the payment succeed?\n\nOK = Paid\nCancel = Pending/Failed');
+  const status = statusChoice ? 'Paid' : '';
+  let reason = '';
+
+  if (!statusChoice) {
+    reason = window.prompt('Optional: Add a note for this transaction\n(e.g., "Card declined", "Waiting for check", "Will pay later")', '');
+  }
+
   const sale = {
     id: createId('sale'),
     number: saleNumber,
@@ -979,6 +1023,8 @@ function completeSale() {
     taxRate: getTaxRateValue(),
     taxLabel: getTaxLabel(),
     paymentMethod: paymentMethod.value,
+    status: status || 'Pending',
+    reason: reason || '',
     items: state.bill.map((item) => {
       const product = getProductById(item.productId);
       return {
@@ -996,6 +1042,7 @@ function completeSale() {
   saveState();
   renderBill();
   renderSalesStats();
+  renderTransactionStats();
   renderSalesHistory();
   billNumberEl.textContent = `#${String(state.sales.length + 1).padStart(4, '0')}`;
   printReceipt(sale.id);
@@ -1020,6 +1067,7 @@ function renderAll() {
   renderProducts();
   renderBill();
   renderSalesStats();
+  renderTransactionStats();
   renderSalesHistory();
   countryStatusEl.textContent = state.settings?.country || 'India';
   businessNameDisplay.textContent = state.settings?.businessName || 'Your Business Name';
@@ -1109,7 +1157,23 @@ importDataInput.addEventListener('change', async () => {
   }
 });
 
-salesFilter.addEventListener('change', renderSalesHistory);
+salesFilter.addEventListener('change', () => {
+  filterDateRange = salesFilter.value;
+  renderTransactionStats();
+  renderSalesHistory();
+});
+
+paymentMethodFilter.addEventListener('change', () => {
+  filterPaymentMethod = paymentMethodFilter.value;
+  renderTransactionStats();
+  renderSalesHistory();
+});
+
+transactionStatusFilter.addEventListener('change', () => {
+  filterStatus = transactionStatusFilter.value;
+  renderTransactionStats();
+  renderSalesHistory();
+});
 
 categoryForm.addEventListener('submit', (event) => {
   event.preventDefault();

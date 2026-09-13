@@ -129,6 +129,40 @@ body:not(.dashboard-view) #new-bill {
   font-weight: 600;
 }
 
+.stat-card {
+  background: linear-gradient(135deg, #f9f7f3 0%, #fdfbf7 100%);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.stat-subtitle {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
 .status-pill {
   display: inline-flex;
   align-items: center;
