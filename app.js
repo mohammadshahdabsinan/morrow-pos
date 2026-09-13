@@ -34,6 +34,7 @@ const palette = ['terracotta', 'ochre', 'sage', 'blue', 'cocoa'];
 const defaultState = {
   settings: {
     businessName: 'Your Business Name',
+    businessPhone: '',
     country: 'India',
     locale: 'en-IN',
     currency: 'Rs',
@@ -78,6 +79,7 @@ const currencyInput = document.querySelector('#currency-symbol');
 const countryInput = document.querySelector('#business-country');
 const localeInput = document.querySelector('#business-locale');
 const businessNameInput = document.querySelector('#business-name');
+const businessPhoneInput = document.querySelector('#business-phone');
 const businessNameDisplay = document.querySelector('#business-name-display');
 const categorySortInput = document.querySelector('#category-sort');
 const dashboardProductSortInput = document.querySelector('#dashboard-product-sort');
@@ -797,24 +799,145 @@ function printReceipt(saleId) {
   const sale = state.sales.find((entry) => entry.id === saleId);
   if (!sale) return;
 
-  const receiptWindow = window.open('', '_blank', 'width=420,height=720');
+  const receiptWindow = window.open('', '_blank', 'width=400,height=600');
   if (!receiptWindow) {
     window.alert('Allow pop-ups to print the receipt.');
     return;
   }
 
+  const businessName = sale.businessName || state.settings.businessName || 'Your Business Name';
+  const businessPhone = sale.businessPhone || state.settings.businessPhone || '';
   const itemsHtml = getSaleItems(sale).map((item) => `
-    <tr>
-      <td>${escapeHtml(item.name || 'Product')}</td>
-      <td>${item.quantity}</td>
-      <td>${escapeHtml(formatSaleCurrency(sale, item.price * item.quantity))}</td>
-    </tr>
+    <div style="display:flex;justify-content:space-between;margin:6px 0;font-size:13px;border-bottom:1px dotted #999;padding-bottom:4px">
+      <div style="flex:1">
+        <strong>${escapeHtml(item.name || 'Product')}</strong><br>
+        <span style="font-size:11px;color:#555">${item.quantity} x ${escapeHtml(formatSaleCurrency(sale, item.price))}</span>
+      </div>
+      <div style="text-align:right;white-space:nowrap;margin-left:8px">
+        <strong>${escapeHtml(formatSaleCurrency(sale, item.price * item.quantity))}</strong>
+      </div>
+    </div>
   `).join('');
 
-  receiptWindow.document.write(`<!doctype html><html><head><title>Receipt #${sale.number || ''}</title>
-    <style>body{font-family:Arial,sans-serif;padding:24px;color:#222}h1{margin:0 0 4px}p{color:#666}table{width:100%;border-collapse:collapse;margin:24px 0}td{padding:8px 0;border-bottom:1px solid #ddd}td:nth-child(2),td:nth-child(3){text-align:right}.total{font-size:1.25rem;font-weight:bold;text-align:right}@media print{button{display:none}}</style>
-    </head><body><h1>${escapeHtml(sale.businessName || state.settings.businessName || 'Your Business Name')}</h1><p>Xtra Zone Billing<br>Receipt #${String(sale.number || '').padStart(4, '0')}<br>${escapeHtml(saleDate(sale))}<br>Payment: ${escapeHtml(sale.paymentMethod)}</p>
-    <table><tbody>${itemsHtml}</tbody></table><p>Subtotal: ${escapeHtml(formatSaleCurrency(sale, sale.subtotal))}<br>${escapeHtml(sale.taxLabel || 'Tax')}: ${escapeHtml(formatSaleCurrency(sale, sale.tax || 0))}</p><div class="total">Total: ${escapeHtml(formatSaleCurrency(sale, sale.total))}</div><script>window.onload=()=>window.print();<\/script></body></html>`);
+  const receiptHtml = `<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Receipt #${sale.number}</title>
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      width: 80mm;
+      margin: 0;
+      padding: 8mm;
+      background: white;
+      color: #222;
+      line-height: 1.4;
+    }
+    .receipt-header {
+      text-align: center;
+      margin-bottom: 8px;
+      border-bottom: 2px solid #000;
+      padding-bottom: 6px;
+    }
+    .business-name {
+      font-size: 16px;
+      font-weight: bold;
+      margin: 0;
+    }
+    .business-tag {
+      font-size: 11px;
+      color: #666;
+      margin: 2px 0 0 0;
+    }
+    .business-phone {
+      font-size: 11px;
+      margin: 2px 0 0 0;
+    }
+    .receipt-meta {
+      font-size: 12px;
+      text-align: center;
+      margin: 6px 0;
+    }
+    .items {
+      margin: 8px 0;
+      padding: 4px 0;
+      border-top: 1px solid #999;
+      border-bottom: 1px solid #999;
+    }
+    .totals {
+      margin: 8px 0;
+      font-size: 13px;
+    }
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 4px 0;
+    }
+    .total-row.final {
+      font-weight: bold;
+      font-size: 14px;
+      border-top: 2px solid #000;
+      border-bottom: 2px solid #000;
+      padding: 4px 0;
+      margin: 6px 0;
+    }
+    .thank-you {
+      text-align: center;
+      font-size: 12px;
+      margin-top: 8px;
+      font-style: italic;
+      color: #555;
+    }
+    @media print {
+      body { width: 80mm; }
+      button { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="receipt-header">
+    <p class="business-name">${escapeHtml(businessName)}</p>
+    <p class="business-tag">Xtra Zone Billing</p>
+    ${businessPhone ? `<p class="business-phone">☎ ${escapeHtml(businessPhone)}</p>` : ''}
+  </div>
+
+  <div class="receipt-meta">
+    <strong>Receipt #${String(sale.number).padStart(4, '0')}</strong><br>
+    ${escapeHtml(saleDate(sale))}<br>
+    Payment: ${escapeHtml(sale.paymentMethod)}
+  </div>
+
+  <div class="items">
+    ${itemsHtml}
+  </div>
+
+  <div class="totals">
+    <div class="total-row">
+      <span>Subtotal:</span>
+      <strong>${escapeHtml(formatSaleCurrency(sale, sale.subtotal))}</strong>
+    </div>
+    ${Number(sale.tax) > 0 ? `<div class="total-row">
+      <span>${escapeHtml(sale.taxLabel || 'Tax')}:</span>
+      <strong>${escapeHtml(formatSaleCurrency(sale, sale.tax))}</strong>
+    </div>` : ''}
+    <div class="total-row final">
+      <span>TOTAL:</span>
+      <strong>${escapeHtml(formatSaleCurrency(sale, sale.total))}</strong>
+    </div>
+  </div>
+
+  <div class="thank-you">
+    Thank you for your business!
+  </div>
+
+  <script>
+    window.onload = () => window.print();
+  </script>
+</body>
+</html>`;
+
+  receiptWindow.document.write(receiptHtml);
   receiptWindow.document.close();
 }
 
@@ -846,6 +969,7 @@ function completeSale() {
     id: createId('sale'),
     number: saleNumber,
     businessName: state.settings.businessName,
+    businessPhone: state.settings.businessPhone,
     country: state.settings.country,
     locale: state.settings.locale,
     currency: state.settings.currency,
@@ -887,6 +1011,7 @@ function renderSettings() {
   countryInput.value = state.settings?.country || 'India';
   localeInput.value = state.settings?.locale || 'en-IN';
   businessNameInput.value = state.settings?.businessName || 'Your Business Name';
+  businessPhoneInput.value = state.settings?.businessPhone || '';
 }
 
 function renderAll() {
@@ -932,6 +1057,7 @@ settingsForm.addEventListener('submit', (event) => {
 
   state.settings = {
     businessName: (businessNameInput.value || 'Your Business Name').trim() || 'Your Business Name',
+    businessPhone: (businessPhoneInput.value || '').trim(),
     country: (countryInput.value || 'India').trim() || 'India',
     locale,
     currency: (currencyInput.value || 'Rs').trim() || 'Rs',
