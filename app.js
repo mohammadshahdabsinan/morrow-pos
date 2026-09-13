@@ -1,25 +1,13 @@
-// Firebase Configuration - Loaded from global window object
-// This allows secure config injection without hardcoding secrets
-const firebaseConfig = window.FIREBASE_CONFIG || {
-  authDomain: "xtra-zone-billing.firebaseapp.com",
-  projectId: "xtra-zone-billing",
-  storageBucket: "xtra-zone-billing.firebasestorage.app",
-  messagingSenderId: "222132779514",
-  appId: "1:222132779514:web:3e84c5e1b5d8b8ab3a8c43"
-};
+// Firebase Configuration - REST API (no SDK needed)
+const firebaseConfig = window.FIREBASE_CONFIG || {};
+const FIRESTORE_API_URL = 'https://firestore.googleapis.com/v1/projects';
 
-// Initialize Firebase
-let db = null;
-try {
-  if (window.FIREBASE_CONFIG && typeof firebase !== 'undefined') {
-    firebase.initializeApp(window.FIREBASE_CONFIG);
-    db = firebase.firestore();
-    console.log('✓ Firebase initialized successfully');
-  } else {
-    console.warn('Firebase SDK or config not loaded - offline mode only');
-  }
-} catch (error) {
-  console.warn('Firebase initialization failed - offline mode only', error);
+let firebaseReady = false;
+if (firebaseConfig.projectId && firebaseConfig.apiKey) {
+  firebaseReady = true;
+  console.log('✓ Firebase REST API configured');
+} else {
+  console.warn('Firebase config not found - offline mode only');
 }
 
 const STORAGE_KEY = 'morrow-pos-v2';
@@ -130,18 +118,53 @@ function saveState() {
 }
 
 async function syncToFirebase() {
-  if (!isOnline || isSyncing || !db) return;
+  if (!isOnline || isSyncing || !firebaseReady) return;
 
   isSyncing = true;
   updateSyncStatus();
 
   try {
-    await db.collection(FIREBASE_COLLECTION).doc(SHOP_ID).set({
-      ...state,
-      lastSyncedAt: new Date().toISOString(),
-      deviceId: getDeviceId()
+    const url = `${FIRESTORE_API_URL}/${firebaseConfig.projectId}/databases/(default)/documents/${FIREBASE_COLLECTION}/${SHOP_ID}?key=${firebaseConfig.apiKey}`;
+
+    const docData = {
+      fields: {
+        settings: { mapValue: { fields: Object.entries(state.settings).reduce((acc, [k, v]) => {
+          acc[k] = { stringValue: String(v) };
+          return acc;
+        }, {}) } },
+        categories: { arrayValue: { values: state.categories.map(cat => ({ mapValue: { fields: {
+          id: { stringValue: cat.id },
+          name: { stringValue: cat.name }
+        } } })) } },
+        products: { arrayValue: { values: state.products.map(prod => ({ mapValue: { fields: {
+          id: { stringValue: prod.id },
+          name: { stringValue: prod.name },
+          categoryId: { stringValue: prod.categoryId },
+          price: { integerValue: String(prod.price) },
+          stock: { integerValue: String(prod.stock) }
+        } } })) } },
+        sales: { arrayValue: { values: state.sales.map(sale => ({ mapValue: { fields: {
+          id: { stringValue: sale.id },
+          number: { integerValue: String(sale.number) },
+          total: { integerValue: String(sale.total) },
+          createdAt: { stringValue: sale.createdAt }
+        } } })) } },
+        lastSyncedAt: { stringValue: new Date().toISOString() },
+        deviceId: { stringValue: getDeviceId() }
+      }
+    };
+
+    const response = await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(docData)
     });
-    console.log('✓ Data synced to Firebase');
+
+    if (response.ok) {
+      console.log('✓ Data synced to Firebase');
+    } else {
+      console.error('Firebase sync error:', response.status);
+    }
     updateSyncStatus();
   } catch (error) {
     console.error('Firebase sync error:', error);
@@ -152,20 +175,48 @@ async function syncToFirebase() {
 }
 
 async function loadFromFirebase() {
-  if (!isOnline || !db) return null;
+  if (!isOnline || !firebaseReady) return null;
 
   try {
-    const doc = await db.collection(FIREBASE_COLLECTION).doc(SHOP_ID).get();
-    if (doc.exists) {
-      const data = doc.data();
-      console.log('✓ Data loaded from Firebase');
-      return {
-        settings: data.settings || defaultState.settings,
-        categories: Array.isArray(data.categories) ? data.categories : [],
-        products: Array.isArray(data.products) ? data.products : [],
-        sales: Array.isArray(data.sales) ? data.sales : [],
-        bill: Array.isArray(data.bill) ? data.bill : []
-      };
+    const url = `${FIRESTORE_API_URL}/${firebaseConfig.projectId}/databases/(default)/documents/${FIREBASE_COLLECTION}/${SHOP_ID}?key=${firebaseConfig.apiKey}`;
+
+    const response = await fetch(url);
+    if (response.ok) {
+      const doc = await response.json();
+      if (doc.fields) {
+        const fields = doc.fields;
+        console.log('✓ Data loaded from Firebase');
+
+        const parseArray = (arr, mapper) => {
+          if (!arr || !arr.arrayValue || !arr.arrayValue.values) return [];
+          return arr.arrayValue.values.map(mapper);
+        };
+
+        return {
+          settings: fields.settings?.mapValue?.fields ? Object.entries(fields.settings.mapValue.fields).reduce((acc, [k, v]) => {
+            acc[k] = v.stringValue || v.booleanValue || v.integerValue;
+            return acc;
+          }, {}) : defaultState.settings,
+          categories: parseArray(fields.categories, v => ({
+            id: v.mapValue.fields.id.stringValue,
+            name: v.mapValue.fields.name.stringValue
+          })),
+          products: parseArray(fields.products, v => ({
+            id: v.mapValue.fields.id.stringValue,
+            name: v.mapValue.fields.name.stringValue,
+            categoryId: v.mapValue.fields.categoryId.stringValue,
+            price: Number(v.mapValue.fields.price.integerValue),
+            stock: Number(v.mapValue.fields.stock.integerValue)
+          })),
+          sales: parseArray(fields.sales, v => ({
+            id: v.mapValue.fields.id.stringValue,
+            number: Number(v.mapValue.fields.number.integerValue),
+            total: Number(v.mapValue.fields.total.integerValue),
+            createdAt: v.mapValue.fields.createdAt.stringValue
+          })),
+          bill: []
+        };
+      }
     }
   } catch (error) {
     console.error('Firebase load error:', error);
