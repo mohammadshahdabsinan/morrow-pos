@@ -138,6 +138,17 @@ body:not(.dashboard-view) #new-bill {
   background: #eef5ef;
   color: var(--green);
   font-size: 0.8rem;
+  transition: all 0.3s ease;
+}
+
+.status-pill:has(.status-dot[style*="rgb(255, 107, 107)"]) {
+  background: #ffe0e0;
+  color: #d32f2f;
+}
+
+.status-pill:has(.status-dot[style*="rgb(255, 165, 0)"]) {
+  background: #fff3cd;
+  color: #cc8a00;
 }
 
 .status-dot {
@@ -146,6 +157,7 @@ body:not(.dashboard-view) #new-bill {
   border-radius: 50%;
   background: var(--green);
   display: inline-block;
+  transition: background 0.3s ease;
 }
 
 .ghost-btn, .inline-btn, .complete-btn, .stacked-form button, .inline-form button {

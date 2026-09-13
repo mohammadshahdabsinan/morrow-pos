@@ -1,4 +1,35 @@
+// Firebase Configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyCIjXz3KM826ICNpPysUU90Vy9PsrGRPIM",
+  authDomain: "xtra-zone-billing.firebaseapp.com",
+  projectId: "xtra-zone-billing",
+  storageBucket: "xtra-zone-billing.firebasestorage.app",
+  messagingSenderId: "222132779514",
+  appId: "1:222132779514:web:3e84c5e1b5d8b8ab3a8c43"
+};
+
+// Initialize Firebase
+const firebaseApp = firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore(firebaseApp);
+
 const STORAGE_KEY = 'morrow-pos-v2';
+const FIREBASE_COLLECTION = 'shops';
+const SHOP_ID = 'default-shop';
+
+let isOnline = navigator.onLine;
+let isSyncing = false;
+
+// Track online/offline status
+window.addEventListener('online', () => {
+  isOnline = true;
+  updateSyncStatus();
+  syncToFirebase();
+});
+
+window.addEventListener('offline', () => {
+  isOnline = false;
+  updateSyncStatus();
+});
 
 const palette = ['terracotta', 'ochre', 'sage', 'blue', 'cocoa'];
 
@@ -85,6 +116,79 @@ function loadState() {
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  syncToFirebase();
+}
+
+async function syncToFirebase() {
+  if (!isOnline || isSyncing) return;
+
+  isSyncing = true;
+  updateSyncStatus();
+
+  try {
+    await db.collection(FIREBASE_COLLECTION).doc(SHOP_ID).set({
+      ...state,
+      lastSyncedAt: new Date().toISOString(),
+      deviceId: getDeviceId()
+    });
+    updateSyncStatus();
+  } catch (error) {
+    console.error('Firebase sync error:', error);
+  } finally {
+    isSyncing = false;
+    updateSyncStatus();
+  }
+}
+
+async function loadFromFirebase() {
+  if (!isOnline) return null;
+
+  try {
+    const doc = await db.collection(FIREBASE_COLLECTION).doc(SHOP_ID).get();
+    if (doc.exists) {
+      const data = doc.data();
+      return {
+        settings: data.settings || defaultState.settings,
+        categories: Array.isArray(data.categories) ? data.categories : [],
+        products: Array.isArray(data.products) ? data.products : [],
+        sales: Array.isArray(data.sales) ? data.sales : [],
+        bill: Array.isArray(data.bill) ? data.bill : []
+      };
+    }
+  } catch (error) {
+    console.error('Firebase load error:', error);
+  }
+  return null;
+}
+
+function getDeviceId() {
+  let deviceId = localStorage.getItem('device-id');
+  if (!deviceId) {
+    deviceId = 'device-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+    localStorage.setItem('device-id', deviceId);
+  }
+  return deviceId;
+}
+
+function updateSyncStatus() {
+  const statusPill = document.querySelector('.status-pill');
+  if (!statusPill) return;
+
+  const statusDot = statusPill.querySelector('.status-dot');
+
+  if (!isOnline) {
+    statusPill.textContent = '⚠ Offline';
+    statusPill.innerHTML = '<span class="status-dot"></span>Offline';
+    statusDot.style.background = '#ff6b6b';
+  } else if (isSyncing) {
+    statusPill.textContent = '⟳ Syncing...';
+    statusPill.innerHTML = '<span class="status-dot"></span>Syncing...';
+    statusDot.style.background = '#ffa500';
+  } else {
+    statusPill.textContent = '✓ Synced';
+    statusPill.innerHTML = '<span class="status-dot"></span>Synced';
+    statusDot.style.background = '#51cf66';
+  }
 }
 
 function downloadFile(filename, content, type) {
@@ -952,3 +1056,20 @@ document.querySelector('#go-to-cart').addEventListener('click', () => {
 buildCategoryOptions();
 renderAll();
 setView(currentView);
+
+// Initialize Firebase sync on startup
+(async () => {
+  updateSyncStatus();
+  if (isOnline) {
+    try {
+      const firebaseData = await loadFromFirebase();
+      if (firebaseData && (firebaseData.products.length > 0 || firebaseData.categories.length > 0)) {
+        Object.assign(state, firebaseData);
+        saveState();
+        renderAll();
+      }
+    } catch (error) {
+      console.error('Initial Firebase load failed:', error);
+    }
+  }
+})();
