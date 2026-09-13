@@ -11,22 +11,12 @@ const firebaseConfig = window.FIREBASE_CONFIG || {
 // Initialize Firebase
 let db = null;
 try {
-  if (window.FIREBASE_CONFIG) {
-    if (typeof firebase !== 'undefined') {
-      // Using firebase compat SDK
-      firebase.initializeApp(window.FIREBASE_CONFIG);
-      db = firebase.firestore();
-      console.log('✓ Firebase initialized successfully (compat)');
-    } else if (typeof window.firebase !== 'undefined') {
-      // Fallback: modular SDK
-      window.db = firebase.firestore(firebase.initializeApp(window.FIREBASE_CONFIG));
-      db = window.db;
-      console.log('✓ Firebase initialized successfully (modular)');
-    } else {
-      console.warn('Firebase SDK not loaded - offline mode only');
-    }
+  if (window.FIREBASE_CONFIG && typeof firebase !== 'undefined') {
+    firebase.initializeApp(window.FIREBASE_CONFIG);
+    db = firebase.firestore();
+    console.log('✓ Firebase initialized successfully');
   } else {
-    console.warn('Firebase config not found - offline mode only');
+    console.warn('Firebase SDK or config not loaded - offline mode only');
   }
 } catch (error) {
   console.warn('Firebase initialization failed - offline mode only', error);
