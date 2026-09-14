@@ -16,6 +16,8 @@ const SHOP_ID = 'default-shop';
 
 let isOnline = navigator.onLine;
 let isSyncing = false;
+let lastSyncTime = 0;
+const SYNC_THROTTLE_MS = 5000; // Min 5 seconds between syncs
 
 // Track online/offline status
 window.addEventListener('online', () => {
@@ -127,13 +129,20 @@ function loadState() {
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  syncToFirebase();
+  const now = Date.now();
+  if (now - lastSyncTime >= SYNC_THROTTLE_MS) {
+    syncToFirebase();
+  }
 }
 
 async function syncToFirebase() {
   if (!isOnline || isSyncing || !firebaseReady) return;
 
+  const now = Date.now();
+  if (now - lastSyncTime < SYNC_THROTTLE_MS) return;
+
   isSyncing = true;
+  lastSyncTime = now;
   updateSyncStatus();
 
   try {
@@ -175,6 +184,7 @@ async function syncToFirebase() {
 
     if (response.ok) {
       console.log('✓ Data synced to Firebase');
+      localStorage.setItem('last-firebase-sync', new Date().toISOString());
     } else {
       console.error('Firebase sync error:', response.status);
     }
@@ -198,7 +208,16 @@ async function loadFromFirebase() {
       const doc = await response.json();
       if (doc.fields) {
         const fields = doc.fields;
+        const lastSyncedAt = fields.lastSyncedAt?.stringValue;
+        const localLastSync = localStorage.getItem('last-firebase-sync');
+
+        if (localLastSync && lastSyncedAt && lastSyncedAt === localLastSync) {
+          console.log('✓ Firebase data unchanged, using local cache');
+          return null;
+        }
+
         console.log('✓ Data loaded from Firebase');
+        localStorage.setItem('last-firebase-sync', lastSyncedAt || '');
 
         const parseArray = (arr, mapper) => {
           if (!arr || !arr.arrayValue || !arr.arrayValue.values) return [];
@@ -226,8 +245,7 @@ async function loadFromFirebase() {
             number: Number(v.mapValue.fields.number.integerValue),
             total: Number(v.mapValue.fields.total.integerValue),
             createdAt: v.mapValue.fields.createdAt.stringValue
-          })),
-          bill: []
+          }))
         };
       }
     }
@@ -1317,7 +1335,10 @@ setView(currentView);
     try {
       const firebaseData = await loadFromFirebase();
       if (firebaseData && (firebaseData.products.length > 0 || firebaseData.categories.length > 0)) {
+        // Merge Firebase data but preserve local bill
+        const localBill = state.bill;
         Object.assign(state, firebaseData);
+        state.bill = localBill;
         saveState();
         renderAll();
       }
