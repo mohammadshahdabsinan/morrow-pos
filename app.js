@@ -1012,7 +1012,11 @@ function printReceipt(saleId) {
   </div>
 
   <script>
-    window.onload = () => window.print();
+    window.onload = () => {
+      window.print();
+      setTimeout(() => window.close(), 100);
+    };
+    window.onafterprint = () => window.close();
   </script>
 </body>
 </html>`;
