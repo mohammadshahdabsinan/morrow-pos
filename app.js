@@ -1321,17 +1321,135 @@ function changeProductSort(value) {
 dashboardProductSortInput.addEventListener('change', () => changeProductSort(dashboardProductSortInput.value));
 catalogProductSortInput.addEventListener('change', () => changeProductSort(catalogProductSortInput.value));
 
-document.querySelector('#reset-data').addEventListener('click', () => {
-  const confirmReset = window.confirm('Clear all local products, categories, sales, and the current bill?');
-  if (!confirmReset) return;
-  localStorage.removeItem(STORAGE_KEY);
-  Object.assign(state, structuredClone(defaultState));
-  activeCategory = 'all';
-  searchText = '';
-  searchInput.value = '';
-  buildCategoryOptions();
-  renderAll();
-});
+function exportTransactionsPDF() {
+  const filteredSales = getFilteredSales();
+  if (filteredSales.length === 0) {
+    alert('No transactions to export. Apply filters and try again.');
+    return;
+  }
+
+  const businessName = state.settings.businessName || 'Xtra Zone Billing';
+  const currency = state.settings.currency || 'Rs';
+  const today = new Date();
+  const dateStr = today.toLocaleDateString('en-IN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  let tableRows = '';
+  let totalRevenue = 0;
+
+  filteredSales.forEach((sale) => {
+    const itemCount = getSaleItems(sale).reduce((sum, item) => sum + item.quantity, 0);
+    const saleDate = new Date(sale.createdAt).toLocaleDateString('en-IN', {
+      month: 'short',
+      day: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    totalRevenue += sale.total;
+
+    tableRows += `
+      <tr>
+        <td>${String(sale.number || '').padStart(4, '0')}</td>
+        <td>${saleDate}</td>
+        <td>${sale.paymentMethod || '-'}</td>
+        <td style="text-align:center">${itemCount}</td>
+        <td style="text-align:right">${currency} ${sale.total}</td>
+        <td>${sale.status || '-'}</td>
+      </tr>
+    `;
+  });
+
+  const dateRangeLabel = filterDateRange === 'today' ? 'Today' : 'All Time';
+  const paymentLabel = filterPaymentMethod ? ` (${filterPaymentMethod})` : '';
+  const statusLabel = filterStatus ? ` (${filterStatus})` : '';
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Transaction Report</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
+        .header { margin-bottom: 30px; }
+        .business-name { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
+        .report-title { font-size: 18px; font-weight: bold; margin-bottom: 10px; }
+        .report-meta { font-size: 12px; color: #666; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th { background: #f5f5f5; padding: 12px; text-align: left; border-bottom: 2px solid #ddd; font-weight: bold; }
+        td { padding: 10px 12px; border-bottom: 1px solid #eee; }
+        tr:hover { background: #f9f9f9; }
+        .summary { margin-top: 30px; padding-top: 20px; border-top: 2px solid #ddd; }
+        .summary-row { display: flex; justify-content: space-between; margin: 10px 0; font-size: 14px; }
+        .summary-row.total { font-size: 16px; font-weight: bold; color: #2c5f2d; }
+        @media print {
+          body { margin: 0; }
+          table { page-break-inside: avoid; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="business-name">${escapeHtml(businessName)}</div>
+        <div class="report-title">Transaction Report</div>
+        <div class="report-meta">
+          <div>Generated: ${dateStr}</div>
+          <div>Period: ${dateRangeLabel}${paymentLabel}${statusLabel}</div>
+          <div>Total Records: ${filteredSales.length}</div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Sale #</th>
+            <th>Date & Time</th>
+            <th>Payment Method</th>
+            <th style="text-align:center">Items</th>
+            <th style="text-align:right">Amount</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+      </table>
+
+      <div class="summary">
+        <div class="summary-row">
+          <span>Total Transactions:</span>
+          <span>${filteredSales.length}</span>
+        </div>
+        <div class="summary-row total">
+          <span>Total Revenue:</span>
+          <span>${currency} ${totalRevenue}</span>
+        </div>
+        <div class="summary-row">
+          <span>Average Transaction:</span>
+          <span>${currency} ${Math.round(totalRevenue / filteredSales.length)}</span>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const printWindow = window.open('', 'TransactionPDF');
+  printWindow.document.write(html);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+}
+
+const exportPdfBtn = document.querySelector('#export-pdf-btn');
+if (exportPdfBtn) {
+  exportPdfBtn.addEventListener('click', exportTransactionsPDF);
+}
 
 document.querySelectorAll('[data-view]').forEach((button) => {
   button.addEventListener('click', () => setView(button.dataset.view));

@@ -180,16 +180,6 @@
               <input id="import-data" type="file" accept="application/json" hidden />
             </div>
           </div>
-          <div class="card-block danger-block">
-            <div class="card-head row-split">
-              <div>
-                <p class="eyebrow">Local storage</p>
-                <h2>Clear this workspace</h2>
-              </div>
-            </div>
-            <p class="helper-text">This removes all products, categories, bills, and transactions from this browser.</p>
-            <button class="ghost-btn" id="reset-data" type="button">Clear all local data</button>
-          </div>
           </div>
 
           <div class="view-panel hidden" data-panel="transactions">
@@ -226,7 +216,7 @@
             </div>
 
             <!-- Filters -->
-            <div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap">
+            <div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
               <select id="sales-filter" class="sales-filter" aria-label="Filter by date">
                 <option value="all">All time</option>
                 <option value="today">Today</option>
@@ -244,6 +234,7 @@
                 <option value="Pending">Pending</option>
                 <option value="Failed">Failed</option>
               </select>
+              <button class="inline-btn" id="export-pdf-btn" type="button">📄 Export as PDF</button>
             </div>
 
             <div id="sales-history" class="sales-history"></div>
