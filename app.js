@@ -1434,10 +1434,6 @@ function exportTransactionsPDF() {
           <span>Total Revenue:</span>
           <span>${currency} ${totalRevenue}</span>
         </div>
-        <div class="summary-row">
-          <span>Average Transaction:</span>
-          <span>${currency} ${Math.round(totalRevenue / filteredSales.length)}</span>
-        </div>
       </div>
     </body>
     </html>
