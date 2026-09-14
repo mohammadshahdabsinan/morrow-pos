@@ -168,7 +168,20 @@ async function syncToFirebase() {
         sales: { arrayValue: { values: state.sales.map(sale => ({ mapValue: { fields: {
           id: { stringValue: sale.id },
           number: { integerValue: String(sale.number) },
+          subtotal: { integerValue: String(sale.subtotal || 0) },
+          tax: { integerValue: String(sale.tax || 0) },
           total: { integerValue: String(sale.total) },
+          paymentMethod: { stringValue: sale.paymentMethod || '' },
+          status: { stringValue: sale.status || 'Pending' },
+          reason: { stringValue: sale.reason || '' },
+          taxRate: { stringValue: String(sale.taxRate || 0) },
+          taxLabel: { stringValue: sale.taxLabel || 'Tax' },
+          items: { arrayValue: { values: (sale.items || []).map(item => ({ mapValue: { fields: {
+            productId: { stringValue: item.productId || '' },
+            name: { stringValue: item.name || '' },
+            price: { integerValue: String(item.price || 0) },
+            quantity: { integerValue: String(item.quantity || 0) }
+          } } })) } },
           createdAt: { stringValue: sale.createdAt }
         } } })) } },
         lastSyncedAt: { stringValue: new Date().toISOString() },
@@ -243,7 +256,20 @@ async function loadFromFirebase() {
           sales: parseArray(fields.sales, v => ({
             id: v.mapValue.fields.id.stringValue,
             number: Number(v.mapValue.fields.number.integerValue),
+            subtotal: Number(v.mapValue.fields.subtotal?.integerValue || 0),
+            tax: Number(v.mapValue.fields.tax?.integerValue || 0),
             total: Number(v.mapValue.fields.total.integerValue),
+            paymentMethod: v.mapValue.fields.paymentMethod?.stringValue || '',
+            status: v.mapValue.fields.status?.stringValue || 'Pending',
+            reason: v.mapValue.fields.reason?.stringValue || '',
+            taxRate: Number(v.mapValue.fields.taxRate?.stringValue || 0),
+            taxLabel: v.mapValue.fields.taxLabel?.stringValue || 'Tax',
+            items: parseArray(v.mapValue.fields.items, item => ({
+              productId: item.mapValue.fields.productId?.stringValue || '',
+              name: item.mapValue.fields.name?.stringValue || '',
+              price: Number(item.mapValue.fields.price?.integerValue || 0),
+              quantity: Number(item.mapValue.fields.quantity?.integerValue || 0)
+            })),
             createdAt: v.mapValue.fields.createdAt.stringValue
           }))
         };
