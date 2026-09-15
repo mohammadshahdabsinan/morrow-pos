@@ -777,13 +777,12 @@ function updateTotals() {
 }
 
 function renderSalesStats() {
-  const orderCount = state.sales.length;
   const today = new Date().toDateString();
-  const todayRevenue = state.sales
-    .filter((sale) => new Date(sale.createdAt).toDateString() === today)
-    .reduce((sum, sale) => sum + sale.total, 0);
+  const todaySales = state.sales.filter((sale) => new Date(sale.createdAt).toDateString() === today);
+  const todayOrders = todaySales.length;
+  const todayRevenue = todaySales.reduce((sum, sale) => sum + sale.total, 0);
 
-  orderCountEl.textContent = String(orderCount);
+  orderCountEl.textContent = String(todayOrders);
   todayRevenueEl.textContent = currency(todayRevenue);
 }
 
