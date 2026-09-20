@@ -968,6 +968,31 @@ function isNativeApp() {
   return Boolean(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 }
 
+// Capacitor's WebView has no real popup/multi-window support, so window.open()
+// navigates the whole app away with no way back. Show the same HTML in an
+// in-page overlay with a real Close button instead.
+function showHtmlDocumentModal(htmlDocument) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;flex-direction:column;padding:16px;';
+
+  const closeBar = document.createElement('div');
+  closeBar.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:8px;';
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.textContent = '✕ Close';
+  closeBtn.style.cssText = 'padding:10px 16px;border:none;border-radius:6px;background:#cf7356;color:white;font-size:14px;';
+  closeBtn.addEventListener('click', () => overlay.remove());
+  closeBar.appendChild(closeBtn);
+
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'flex:1;width:100%;border:none;border-radius:8px;background:white;';
+  iframe.srcdoc = htmlDocument;
+
+  overlay.appendChild(closeBar);
+  overlay.appendChild(iframe);
+  document.body.appendChild(overlay);
+}
+
 function sendToPrinter(printerIP, escPosData, sale) {
   if (isNativeApp()) {
     window.Capacitor.Plugins.ThermalPrinter.printRaw({ ip: printerIP, port: 9100, data: escPosData })
@@ -1002,12 +1027,6 @@ function sendToPrinter(printerIP, escPosData, sale) {
 }
 
 function printViaDialog(sale) {
-  const receiptWindow = window.open('', '_blank', 'width=400,height=600');
-  if (!receiptWindow) {
-    window.alert('Allow pop-ups to print the receipt.');
-    return;
-  }
-
   const businessName = sale.businessName || state.settings.businessName || 'Your Business Name';
   const businessPhone = sale.businessPhone || state.settings.businessPhone || '';
   const itemsHtml = getSaleItems(sale).map((item) => `
@@ -1144,6 +1163,16 @@ function printViaDialog(sale) {
 </body>
 </html>`;
 
+  if (isNativeApp()) {
+    showHtmlDocumentModal(receiptHtml);
+    return;
+  }
+
+  const receiptWindow = window.open('', '_blank', 'width=400,height=600');
+  if (!receiptWindow) {
+    window.alert('Allow pop-ups to print the receipt.');
+    return;
+  }
   receiptWindow.document.write(receiptHtml);
   receiptWindow.document.close();
 }
@@ -1565,7 +1594,16 @@ function exportTransactionsPDF() {
     </html>
   `;
 
+  if (isNativeApp()) {
+    showHtmlDocumentModal(html);
+    return;
+  }
+
   const printWindow = window.open('', 'TransactionPDF');
+  if (!printWindow) {
+    window.alert('Allow pop-ups to export the PDF.');
+    return;
+  }
   printWindow.document.write(html);
   printWindow.document.close();
   printWindow.focus();
