@@ -42,7 +42,8 @@ const defaultState = {
     currency: 'Rs',
     taxEnabled: false,
     taxRate: 0,
-    taxLabel: 'Tax'
+    taxLabel: 'Tax',
+    taxMode: 'exclusive'
   },
   categories: [],
   products: [],
@@ -79,6 +80,7 @@ const billNumberEl = document.querySelector('#bill-number');
 const countryStatusEl = document.querySelector('#country-status');
 const taxEnabledInput = document.querySelector('#tax-enabled');
 const taxRateInput = document.querySelector('#tax-rate');
+const taxModeInput = document.querySelector('#tax-mode');
 const taxLabelInput = document.querySelector('#tax-label');
 const currencyInput = document.querySelector('#currency-symbol');
 const countryInput = document.querySelector('#business-country');
@@ -175,6 +177,7 @@ async function syncToFirebase() {
           status: { stringValue: sale.status || 'Pending' },
           reason: { stringValue: sale.reason || '' },
           taxRate: { stringValue: String(sale.taxRate || 0) },
+          taxMode: { stringValue: sale.taxMode || 'exclusive' },
           taxLabel: { stringValue: sale.taxLabel || 'Tax' },
           items: { arrayValue: { values: (sale.items || []).map(item => ({ mapValue: { fields: {
             productId: { stringValue: item.productId || '' },
@@ -263,6 +266,7 @@ async function loadFromFirebase() {
             status: v.mapValue.fields.status?.stringValue || 'Pending',
             reason: v.mapValue.fields.reason?.stringValue || '',
             taxRate: Number(v.mapValue.fields.taxRate?.stringValue || 0),
+            taxMode: v.mapValue.fields.taxMode?.stringValue || 'exclusive',
             taxLabel: v.mapValue.fields.taxLabel?.stringValue || 'Tax',
             items: parseArray(v.mapValue.fields.items, item => ({
               productId: item.mapValue.fields.productId?.stringValue || '',
@@ -348,6 +352,10 @@ function getTaxRateValue() {
   return Math.max(0, numericRate);
 }
 
+function getTaxMode() {
+  return state.settings?.taxMode === 'inclusive' ? 'inclusive' : 'exclusive';
+}
+
 function getTaxLabel() {
   return (state.settings?.taxLabel || 'Tax').trim() || 'Tax';
 }
@@ -362,17 +370,27 @@ function isValidLocale(locale) {
 }
 
 function getCurrentTotals() {
-  const subtotal = state.bill.reduce((sum, item) => {
+  const rawSum = state.bill.reduce((sum, item) => {
     const product = getProductById(item.productId);
     const price = item.custom ? item.price : product?.price;
     return sum + (price ? price * item.quantity : 0);
   }, 0);
 
   const taxRate = getTaxRateValue();
-  const tax = subtotal * (taxRate / 100);
-  const total = subtotal + tax;
+  const taxMode = getTaxMode();
 
-  return { subtotal, tax, total, taxRate };
+  let subtotal, tax, total;
+  if (taxMode === 'inclusive' && taxRate > 0) {
+    total = rawSum;
+    subtotal = total / (1 + taxRate / 100);
+    tax = total - subtotal;
+  } else {
+    subtotal = rawSum;
+    tax = subtotal * (taxRate / 100);
+    total = subtotal + tax;
+  }
+
+  return { subtotal, tax, total, taxRate, taxMode };
 }
 
 function getCategoryName(categoryId) {
@@ -893,10 +911,20 @@ function printToNetworkPrinter(sale, printerIP) {
 
   let escPos = '';
 
+  const lineWidth = 48;
+  const separator = '-'.repeat(lineWidth);
+  const twoColumnLine = (left, right) => {
+    const spacing = lineWidth - left.length - right.length;
+    return spacing > 0 ? left + ' '.repeat(spacing) + right : `${left} ${right}`;
+  };
+
   escPos += '\x1b\x61\x01';
   escPos += '\x1d\x21\x11';
   escPos += businessName + '\n';
   escPos += '\x1d\x21\x00';
+  if (businessPhone) {
+    escPos += businessPhone + '\n';
+  }
 
   escPos += '\n';
   escPos += `Receipt #${String(sale.number).padStart(4, '0')}\n`;
@@ -904,22 +932,25 @@ function printToNetworkPrinter(sale, printerIP) {
   escPos += `Payment: ${sale.paymentMethod}\n`;
   escPos += '\x1b\x61\x00';
 
-  escPos += '\n---------------------------\n';
+  escPos += `\n${separator}\n`;
   getSaleItems(sale).forEach((item) => {
     const qty = item.quantity;
     const price = item.price * qty;
-    const name = item.name.substring(0, 20);
+    const unitPrice = formatSaleCurrency(sale, item.price);
+    const lineTotal = formatSaleCurrency(sale, price);
+    const name = item.name.substring(0, lineWidth);
+
     escPos += `${name}\n`;
-    escPos += `  ${qty} x ${formatSaleCurrency(sale, item.price)} = ${formatSaleCurrency(sale, price)}\n`;
+    escPos += twoColumnLine(`  ${qty} x ${unitPrice}`, lineTotal) + '\n';
   });
 
-  escPos += '---------------------------\n';
-  escPos += `Subtotal: ${formatSaleCurrency(sale, sale.subtotal || 0)}\n`;
+  escPos += `${separator}\n`;
+  escPos += twoColumnLine('Subtotal', formatSaleCurrency(sale, sale.subtotal || 0)) + '\n';
   if (sale.tax > 0) {
-    escPos += `${sale.taxLabel}: ${formatSaleCurrency(sale, sale.tax)}\n`;
+    escPos += twoColumnLine(sale.taxLabel, formatSaleCurrency(sale, sale.tax)) + '\n';
   }
-  escPos += '\x1d\x21\x11';
-  escPos += `Total: ${formatSaleCurrency(sale, sale.total)}\n`;
+  escPos += '\x1d\x21\x01';
+  escPos += twoColumnLine('Total', formatSaleCurrency(sale, sale.total)) + '\n';
   escPos += '\x1d\x21\x00';
 
   escPos += '\n';
@@ -1144,6 +1175,7 @@ function completeSale() {
     tax,
     total,
     taxRate: getTaxRateValue(),
+    taxMode: getTaxMode(),
     taxLabel: getTaxLabel(),
     paymentMethod: paymentMethod.value,
     status: status || 'Pending',
@@ -1176,6 +1208,7 @@ function renderSettings() {
 
   taxEnabledInput.checked = Boolean(state.settings?.taxEnabled);
   taxRateInput.value = Number(state.settings?.taxRate || 0);
+  taxModeInput.value = getTaxMode();
   taxLabelInput.value = state.settings?.taxLabel || 'Tax';
   currencyInput.value = state.settings?.currency || 'Rs';
   countryInput.value = state.settings?.country || 'India';
@@ -1234,6 +1267,7 @@ settingsForm.addEventListener('submit', (event) => {
     currency: (currencyInput.value || 'Rs').trim() || 'Rs',
     taxEnabled: Boolean(taxEnabledInput.checked),
     taxRate: Number(taxRateInput.value || 0),
+    taxMode: taxModeInput.value === 'inclusive' ? 'inclusive' : 'exclusive',
     taxLabel: (taxLabelInput.value || 'Tax').trim() || 'Tax'
   };
 
