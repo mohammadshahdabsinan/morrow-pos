@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WiFi Thermal Printer - Connection Guide</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 40px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #0066cc;
+      text-align: center;
+      font-size: 28px;
+      margin-bottom: 10px;
+      border-bottom: 3px solid #0066cc;
+      padding-bottom: 15px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+    }
+    h2 {
+      color: #0066cc;
+      margin-top: 30px;
+      border-left: 4px solid #0066cc;
+      padding-left: 12px;
+    }
+    .step {
+      background: #f9f9f9;
+      border-left: 4px solid #0066cc;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    .step-number {
+      display: inline-block;
+      background: #0066cc;
+      color: white;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 30px;
+      font-weight: bold;
+      margin-right: 10px;
+      font-size: 14px;
+    }
+    .step-title {
+      font-weight: bold;
+      font-size: 16px;
+      margin: 10px 0;
+    }
+    ul {
+      margin: 10px 0 10px 20px;
+    }
+    li {
+      margin: 6px 0;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+    .code-block {
+      background: #f4f4f4;
+      border: 1px solid #ddd;
+      padding: 12px;
+      margin: 10px 0;
+      overflow-x: auto;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+    .warning {
+      background: #fff3cd;
+      border-left: 4px solid #ff9800;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    .success {
+      background: #d4edda;
+      border-left: 4px solid #28a745;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    .important {
+      background: #e7f3ff;
+      border-left: 4px solid #0066cc;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+    }
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background: #f5f5f5;
+      font-weight: bold;
+    }
+    .printer-specs {
+      background: #f0f7ff;
+      border: 2px solid #0066cc;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+    .printer-specs strong {
+      color: #0066cc;
+    }
+    .troubleshoot {
+      margin: 20px 0;
+    }
+    .troubleshoot h4 {
+      color: #d32f2f;
+      margin-top: 15px;
+    }
+    @media print {
+      body { background: white; }
+      .container { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🖨️ WiFi Thermal Printer Connection Guide</h1>
+    <p class="subtitle">Posiflow KP307-UEWB | ESC/POS Protocol | Port 9100</p>
+
+    <div class="printer-specs">
+      <strong>Printer Model:</strong> Posiflow KP307-UEWB<br>
+      <strong>Protocol:</strong> ESC/POS<br>
+      <strong>Port:</strong> 9100 (default)<br>
+      <strong>Connection:</strong> WiFi<br>
+      <strong>Paper Size:</strong> 80mm (thermal receipt)<br>
+      <strong>Status:</strong> ✅ Fully Tested & Working
+    </div>
+
+    <h2>Physical Printer Setup</h2>
+
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-title">Turn On Printer</div>
+      <ul>
+        <li>Locate power button on printer (usually on side or back)</li>
+        <li>Press and hold for 2 seconds</li>
+        <li>Printer will beep and light turns blue</li>
+        <li>Wait 30 seconds for full startup</li>
+        <li>Blue WiFi indicator light should appear</li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-title">Connect Printer to WiFi</div>
+      <ul>
+        <li>Press and hold the MENU button (on top) for 3 seconds</li>
+        <li>Navigate with arrows (▲/▼) to: <code>Network</code></li>
+        <li>Press ENTER</li>
+        <li>Select: <code>WiFi Settings</code></li>
+        <li>Select your WiFi network name (SSID) from the list</li>
+        <li>Enter WiFi password using the control buttons</li>
+        <li>Press ENTER to connect</li>
+        <li>Wait for "Connected" message to appear</li>
+        <li>Press MENU to exit</li>
+      </ul>
+      <p><strong>Expected result:</strong> WiFi icon appears on printer display, blue light steady</p>
+    </div>
+
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-title">Print Network Configuration Page</div>
+      <ul>
+        <li>Press MENU on printer</li>
+        <li>Navigate to: <code>Settings</code> → <code>System</code></li>
+        <li>Select: <code>Print Network Config</code></li>
+        <li>Press ENTER</li>
+        <li>Printer will print a configuration page</li>
+      </ul>
+    </div>
+
+    <div class="important">
+      ⚠️ SAVE THE PRINTER IP ADDRESS FROM THIS PAGE!<br>
+      Look for the line: <code>IP Address: 192.168.x.x</code><br>
+      Example: <code>IP Address: 192.168.1.105</code><br>
+      You will need this in the app!
+    </div>
+
+    <div class="step">
+      <div class="step-number">4</div>
+      <div class="step-title">Verify WiFi Connection (Optional)</div>
+      <ul>
+        <li>Make sure your phone/tablet is on the SAME WiFi as printer ✓</li>
+        <li>Open a web browser on your phone</li>
+        <li>Type in address bar: <code>http://192.168.1.105</code> (use your printer IP)</li>
+        <li>You should see the printer's web interface</li>
+        <li>If it loads = Connection successful ✓</li>
+        <li>If error = Check WiFi connection and IP address</li>
+      </ul>
+    </div>
+
+    <h2>Configure in Xtra Zone Billing App</h2>
+
+    <div class="step">
+      <div class="step-number">5</div>
+      <div class="step-title">Enter Printer IP in App</div>
+      <ul>
+        <li>Open Xtra Zone Billing app on your phone/tablet</li>
+        <li>Tap: <strong>Business Settings</strong> tab</li>
+        <li>Scroll down to: <strong>🖨️ Thermal Printer (WiFi)</strong> section</li>
+        <li>In the input field, enter your printer IP: <code>192.168.1.105</code></li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <div class="step-number">6</div>
+      <div class="step-title">Test Printer Connection</div>
+      <ul>
+        <li>Make sure printer and phone are on SAME WiFi ✓</li>
+        <li>Click: <strong>📡 Test Connection</strong> button</li>
+        <li>Wait for response...</li>
+      </ul>
+      <p><strong>If green checkmark ✓:</strong> "Printer connected! Ready to print"</p>
+      <p><strong>If red ✗:</strong> "Printer not found"</p>
+      <ul>
+        <li>Check WiFi connection (both devices same network)</li>
+        <li>Verify printer IP is correct</li>
+        <li>Check printer is powered on</li>
+        <li>Try again</li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <div class="step-number">7</div>
+      <div class="step-title">Save Printer IP</div>
+      <ul>
+        <li>Once test is green ✓, click: <strong>✓ Save Printer IP</strong></li>
+        <li>You should see message: "Printer IP saved: 192.168.1.105"</li>
+        <li>Done! ✅</li>
+      </ul>
+    </div>
+
+    <h2>Test Printing</h2>
+
+    <div class="step">
+      <div class="step-number">8</div>
+      <div class="step-title">Complete Your First Sale</div>
+      <ul>
+        <li>Go to: <strong>Dashboard</strong> tab</li>
+        <li>Add items to cart (click products)</li>
+        <li>Click: <strong>Complete Sale</strong> button (right panel)</li>
+        <li>Select payment method (Cash, Card, UPI, etc.)</li>
+        <li>Click blue: <strong>Complete Sale</strong> button with amount</li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <div class="step-number">9</div>
+      <div class="step-title">Print Receipt</div>
+      <ul>
+        <li>After completing sale, you'll see: "Receipt #0001" button</li>
+        <li>Click the Receipt button</li>
+        <li>Thermal printer should print receipt automatically!</li>
+        <li>Receipt prints with:</li>
+        <ul>
+          <li>Business name at top (centered, large)</li>
+          <li>Receipt number and date/time</li>
+          <li>List of items with prices</li>
+          <li>Subtotal, tax (if enabled), total</li>
+          <li>Thank you message</li>
+          <li>Paper cut command</li>
+        </ul>
+      </ul>
+    </div>
+
+    <div class="success">
+      ✅ SUCCESS! Receipt printed to thermal printer!
+    </div>
+
+    <h2>Troubleshooting</h2>
+
+    <div class="troubleshoot">
+      <h4>❌ "Printer not found" Error</h4>
+      <ul>
+        <li>✓ Check both printer and phone are on SAME WiFi</li>
+        <li>✓ Verify printer IP address is correct (check network config page)</li>
+        <li>✓ Printer should be powered on with blue WiFi light</li>
+        <li>✓ Try rebooting printer (turn off/on)</li>
+        <li>✓ Move printer closer to WiFi router if signal weak</li>
+      </ul>
+    </div>
+
+    <div class="troubleshoot">
+      <h4>❌ Printer Connected but Won't Print</h4>
+      <ul>
+        <li>✓ Check printer has paper (load paper if empty)</li>
+        <li>✓ Test printer: press MENU → Self Test</li>
+        <li>✓ Check printer firmware is up to date</li>
+        <li>✓ Restart printer and try again</li>
+      </ul>
+    </div>
+
+    <div class="troubleshoot">
+      <h4>❌ Prints Garbage/Symbols Instead of Text</h4>
+      <ul>
+        <li>✓ This means ESC/POS commands aren't supported</li>
+        <li>✓ Check printer firmware version</li>
+        <li>✓ Update firmware if available</li>
+        <li>✓ Contact printer support with model number</li>
+      </ul>
+    </div>
+
+    <div class="troubleshoot">
+      <h4>❌ Can't Find Printer IP Address</h4>
+      <ul>
+        <li>✓ Print network config page: MENU → Settings → Print Network Config</li>
+        <li>✓ Look carefully for line starting with "IP Address:"</li>
+        <li>✓ Write down the full address (e.g., 192.168.1.105)</li>
+        <li>✓ Test by visiting it in browser: http://192.168.1.105</li>
+      </ul>
+    </div>
+
+    <h2>Quick Reference</h2>
+
+    <table>
+      <tr>
+        <th>What</th>
+        <th>How</th>
+      </tr>
+      <tr>
+        <td>Power On</td>
+        <td>Press power button on side/back</td>
+      </tr>
+      <tr>
+        <td>Connect WiFi</td>
+        <td>MENU → Network → WiFi Settings</td>
+      </tr>
+      <tr>
+        <td>Get IP Address</td>
+        <td>MENU → Settings → Print Network Config</td>
+      </tr>
+      <tr>
+        <td>Test in App</td>
+        <td>Business Settings → 📡 Test Connection</td>
+      </tr>
+      <tr>
+        <td>Print Receipt</td>
+        <td>Complete Sale → Click Receipt button</td>
+      </tr>
+      <tr>
+        <td>Clear IP</td>
+        <td>Business Settings → 🗑️ Clear button</td>
+      </tr>
+    </table>
+
+    <h2>Important Notes</h2>
+
+    <div class="important">
+      📱 <strong>Mobile Requirement:</strong> Phone/tablet MUST be on same WiFi as printer for printing to work
+    </div>
+
+    <div class="warning">
+      ⚠️ <strong>Port 9100:</strong> Printer uses standard ESC/POS port (9100). This is hardcoded and cannot be changed in the app.
+    </div>
+
+    <div class="success">
+      💡 <strong>Fallback:</strong> If printer unavailable, app automatically falls back to browser printing (uses system printer or PDF)
+    </div>
+
+    <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; text-align: center; color: #666; font-size: 12px;">
+      <p>Xtra Zone Billing - WiFi Thermal Printer Connection Guide</p>
+      <p>Printer Model: Posiflow KP307-UEWB | Generated: September 20, 2026</p>
+    </div>
+
+  </div>
+</body>
+</html>
