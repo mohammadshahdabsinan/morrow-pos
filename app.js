@@ -1550,25 +1550,37 @@ const testPrinterBtn = document.querySelector('#test-printer-btn');
 const clearPrinterBtn = document.querySelector('#clear-printer-btn');
 const printerStatusDiv = document.querySelector('#printer-status');
 
-// Load printer IP from Firebase or localStorage
+// Load printer IP from Firebase or localStorage (with retry)
 async function loadPrinterIP() {
   let printerIP = localStorage.getItem('printer-ip');
+  if (printerIPInput && printerIP) {
+    printerIPInput.value = printerIP;
+  }
 
-  if (firebaseReady && isOnline) {
+  if (!firebaseReady || !isOnline) {
+    console.log('Firebase not ready or offline, using localStorage only');
+    return;
+  }
+
+  // Try to fetch from Firebase with retries
+  for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      printerIP = await fetchPrinterIPFromFirebase();
-      if (printerIP && printerIPInput) {
-        printerIPInput.value = printerIP;
-        localStorage.setItem('printer-ip', printerIP);
+      const firebaseIP = await fetchPrinterIPFromFirebase();
+      if (firebaseIP && firebaseIP !== printerIP) {
+        printerIP = firebaseIP;
+        if (printerIPInput) printerIPInput.value = firebaseIP;
+        localStorage.setItem('printer-ip', firebaseIP);
+        console.log('✓ Printer IP loaded from Firebase:', firebaseIP);
       }
+      return; // Success, exit
     } catch (err) {
-      console.warn('Failed to fetch printer IP from Firebase, using local storage', err);
-      if (printerIPInput && printerIP) {
-        printerIPInput.value = printerIP;
+      if (attempt === 3) {
+        console.warn('Failed to fetch printer IP from Firebase after 3 attempts:', err);
+      } else {
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
-  } else if (printerIPInput && printerIP) {
-    printerIPInput.value = printerIP;
   }
 }
 
@@ -1617,7 +1629,8 @@ async function savePrinterIPToFirebase(ip) {
 }
 
 if (printerIPInput) {
-  loadPrinterIP();
+  // Initialize printer IP load (don't block page load)
+  loadPrinterIP().catch(err => console.error('Failed to load printer IP:', err));
 }
 
 if (savePrinterBtn) {
