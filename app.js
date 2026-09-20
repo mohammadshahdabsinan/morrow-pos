@@ -904,7 +904,7 @@ function printToNetworkPrinter(sale, printerIP) {
   escPos += `Payment: ${sale.paymentMethod}\n`;
   escPos += '\x1b\x61\x00';
 
-  escPos += '\n───────────────────────\n';
+  escPos += '\n---------------------------\n';
   getSaleItems(sale).forEach((item) => {
     const qty = item.quantity;
     const price = item.price * qty;
@@ -913,7 +913,7 @@ function printToNetworkPrinter(sale, printerIP) {
     escPos += `  ${qty} x ${formatSaleCurrency(sale, item.price)} = ${formatSaleCurrency(sale, price)}\n`;
   });
 
-  escPos += '───────────────────────\n';
+  escPos += '---------------------------\n';
   escPos += `Subtotal: ${formatSaleCurrency(sale, sale.subtotal || 0)}\n`;
   if (sale.tax > 0) {
     escPos += `${sale.taxLabel}: ${formatSaleCurrency(sale, sale.tax)}\n`;
