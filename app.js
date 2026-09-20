@@ -1550,13 +1550,78 @@ const testPrinterBtn = document.querySelector('#test-printer-btn');
 const clearPrinterBtn = document.querySelector('#clear-printer-btn');
 const printerStatusDiv = document.querySelector('#printer-status');
 
+// Load printer IP from Firebase or localStorage
+async function loadPrinterIP() {
+  let printerIP = localStorage.getItem('printer-ip');
+
+  if (firebaseReady && isOnline) {
+    try {
+      printerIP = await fetchPrinterIPFromFirebase();
+      if (printerIP && printerIPInput) {
+        printerIPInput.value = printerIP;
+        localStorage.setItem('printer-ip', printerIP);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch printer IP from Firebase, using local storage', err);
+      if (printerIPInput && printerIP) {
+        printerIPInput.value = printerIP;
+      }
+    }
+  } else if (printerIPInput && printerIP) {
+    printerIPInput.value = printerIP;
+  }
+}
+
+// Fetch printer IP from Firebase
+async function fetchPrinterIPFromFirebase() {
+  const docPath = `${FIRESTORE_API_URL}/${firebaseConfig.projectId}/databases/(default)/documents/${FIREBASE_COLLECTION}/${SHOP_ID}`;
+
+  try {
+    const response = await fetch(`${docPath}?key=${firebaseConfig.apiKey}`);
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    return data.fields?.printerIP?.stringValue || null;
+  } catch (err) {
+    console.error('Error fetching printer IP from Firebase:', err);
+    return null;
+  }
+}
+
+// Save printer IP to Firebase
+async function savePrinterIPToFirebase(ip) {
+  if (!firebaseReady || !isOnline) {
+    console.log('Firebase not ready or offline, printer IP saved to localStorage only');
+    return;
+  }
+
+  const docPath = `${FIRESTORE_API_URL}/${firebaseConfig.projectId}/databases/(default)/documents/${FIREBASE_COLLECTION}/${SHOP_ID}`;
+
+  try {
+    const response = await fetch(`${docPath}?key=${firebaseConfig.apiKey}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fields: {
+          printerIP: { stringValue: ip }
+        }
+      })
+    });
+
+    if (response.ok) {
+      console.log('✓ Printer IP saved to Firebase');
+    }
+  } catch (err) {
+    console.error('Error saving printer IP to Firebase:', err);
+  }
+}
+
 if (printerIPInput) {
-  const savedIP = localStorage.getItem('printer-ip');
-  if (savedIP) printerIPInput.value = savedIP;
+  loadPrinterIP();
 }
 
 if (savePrinterBtn) {
-  savePrinterBtn.addEventListener('click', () => {
+  savePrinterBtn.addEventListener('click', async () => {
     const ip = printerIPInput.value.trim();
 
     if (!ip) {
@@ -1570,6 +1635,7 @@ if (savePrinterBtn) {
     }
 
     localStorage.setItem('printer-ip', ip);
+    await savePrinterIPToFirebase(ip);
     showPrinterStatus(`✓ Printer IP saved: ${ip}`, 'success');
   });
 }
@@ -1600,9 +1666,10 @@ if (testPrinterBtn) {
 }
 
 if (clearPrinterBtn) {
-  clearPrinterBtn.addEventListener('click', () => {
+  clearPrinterBtn.addEventListener('click', async () => {
     printerIPInput.value = '';
     localStorage.removeItem('printer-ip');
+    await savePrinterIPToFirebase(''); // Save empty string to clear from Firebase
     showPrinterStatus('Printer IP cleared. Will use browser printing.', 'success');
   });
 }
