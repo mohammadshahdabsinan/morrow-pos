@@ -961,10 +961,53 @@ function printToNetworkPrinter(sale, printerIP) {
   escPos += '\n\n';
   escPos += '\x1d\x56\x00';
 
-  sendToPrinter(printerIP, escPos);
+  sendToPrinter(printerIP, escPos, sale);
 }
 
-function sendToPrinter(printerIP, escPosData) {
+function isNativeApp() {
+  return Boolean(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+
+// Capacitor's WebView has no real popup/multi-window support, so window.open()
+// navigates the whole app away with no way back. Show the same HTML in an
+// in-page overlay with a real Close button instead.
+function showHtmlDocumentModal(htmlDocument) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;flex-direction:column;padding:16px;';
+
+  const closeBar = document.createElement('div');
+  closeBar.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:8px;';
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.textContent = '✕ Close';
+  closeBtn.style.cssText = 'padding:10px 16px;border:none;border-radius:6px;background:#cf7356;color:white;font-size:14px;';
+  closeBtn.addEventListener('click', () => overlay.remove());
+  closeBar.appendChild(closeBtn);
+
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'flex:1;width:100%;border:none;border-radius:8px;background:white;';
+  iframe.srcdoc = htmlDocument;
+
+  overlay.appendChild(closeBar);
+  overlay.appendChild(iframe);
+  document.body.appendChild(overlay);
+}
+
+function sendToPrinter(printerIP, escPosData, sale) {
+  if (isNativeApp()) {
+    window.Capacitor.Plugins.ThermalPrinter.printRaw({ ip: printerIP, port: 9100, data: escPosData })
+      .then(() => {
+        console.log('✓ Sent to thermal printer (native)');
+        alert('✓ Printing to thermal printer...');
+      })
+      .catch((error) => {
+        console.error('Printer error (native):', error);
+        alert('Printer not found. Using browser print instead.');
+        if (sale) printViaDialog(sale);
+      });
+    return;
+  }
+
   const url = `http://${printerIP}:9100`;
 
   fetch(url, {
@@ -979,18 +1022,11 @@ function sendToPrinter(printerIP, escPosData) {
   .catch((error) => {
     console.error('Printer error:', error);
     alert('Printer not found. Using browser print instead.');
-    const sale = state.sales.find((s) => s.id === saleId);
     if (sale) printViaDialog(sale);
   });
 }
 
 function printViaDialog(sale) {
-  const receiptWindow = window.open('', '_blank', 'width=400,height=600');
-  if (!receiptWindow) {
-    window.alert('Allow pop-ups to print the receipt.');
-    return;
-  }
-
   const businessName = sale.businessName || state.settings.businessName || 'Your Business Name';
   const businessPhone = sale.businessPhone || state.settings.businessPhone || '';
   const itemsHtml = getSaleItems(sale).map((item) => `
@@ -1127,6 +1163,16 @@ function printViaDialog(sale) {
 </body>
 </html>`;
 
+  if (isNativeApp()) {
+    showHtmlDocumentModal(receiptHtml);
+    return;
+  }
+
+  const receiptWindow = window.open('', '_blank', 'width=400,height=600');
+  if (!receiptWindow) {
+    window.alert('Allow pop-ups to print the receipt.');
+    return;
+  }
   receiptWindow.document.write(receiptHtml);
   receiptWindow.document.close();
 }
@@ -1548,7 +1594,16 @@ function exportTransactionsPDF() {
     </html>
   `;
 
+  if (isNativeApp()) {
+    showHtmlDocumentModal(html);
+    return;
+  }
+
   const printWindow = window.open('', 'TransactionPDF');
+  if (!printWindow) {
+    window.alert('Allow pop-ups to export the PDF.');
+    return;
+  }
   printWindow.document.write(html);
   printWindow.document.close();
   printWindow.focus();
@@ -1697,6 +1752,17 @@ if (testPrinterBtn) {
     }
 
     showPrinterStatus('Testing connection...', 'info');
+
+    if (isNativeApp()) {
+      window.Capacitor.Plugins.ThermalPrinter.testConnection({ ip, port: 9100 })
+        .then(() => {
+          showPrinterStatus('✓ Printer connected! Ready to print.', 'success');
+        })
+        .catch(() => {
+          showPrinterStatus('✗ Printer not found. Check IP and WiFi.', 'error');
+        });
+      return;
+    }
 
     fetch(`http://${ip}:9100`, {
       method: 'POST',
