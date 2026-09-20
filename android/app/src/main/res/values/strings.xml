@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Xtra Zone Billing</string>
+    <string name="title_activity_main">Xtra Zone Billing</string>
+    <string name="package_name">com.shahdabsinan.xtrazonebilling</string>
+    <string name="custom_url_scheme">com.shahdabsinan.xtrazonebilling</string>
+</resources>

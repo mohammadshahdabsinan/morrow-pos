@@ -1,0 +1,20 @@
+{
+  "name": "morrow-pos",
+  "version": "1.0.0",
+  "description": "A standalone billing software product built for local use. It keeps everything in the browser with `localStorage`, so you can add categories, products, and complete sales without a backend.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "node scripts/build-www.js",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:open": "npx cap open android"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2"
+  }
+}

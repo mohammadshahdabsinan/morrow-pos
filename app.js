@@ -961,10 +961,28 @@ function printToNetworkPrinter(sale, printerIP) {
   escPos += '\n\n';
   escPos += '\x1d\x56\x00';
 
-  sendToPrinter(printerIP, escPos);
+  sendToPrinter(printerIP, escPos, sale);
 }
 
-function sendToPrinter(printerIP, escPosData) {
+function isNativeApp() {
+  return Boolean(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+
+function sendToPrinter(printerIP, escPosData, sale) {
+  if (isNativeApp()) {
+    window.Capacitor.Plugins.ThermalPrinter.printRaw({ ip: printerIP, port: 9100, data: escPosData })
+      .then(() => {
+        console.log('✓ Sent to thermal printer (native)');
+        alert('✓ Printing to thermal printer...');
+      })
+      .catch((error) => {
+        console.error('Printer error (native):', error);
+        alert('Printer not found. Using browser print instead.');
+        if (sale) printViaDialog(sale);
+      });
+    return;
+  }
+
   const url = `http://${printerIP}:9100`;
 
   fetch(url, {
@@ -979,7 +997,6 @@ function sendToPrinter(printerIP, escPosData) {
   .catch((error) => {
     console.error('Printer error:', error);
     alert('Printer not found. Using browser print instead.');
-    const sale = state.sales.find((s) => s.id === saleId);
     if (sale) printViaDialog(sale);
   });
 }
@@ -1697,6 +1714,17 @@ if (testPrinterBtn) {
     }
 
     showPrinterStatus('Testing connection...', 'info');
+
+    if (isNativeApp()) {
+      window.Capacitor.Plugins.ThermalPrinter.testConnection({ ip, port: 9100 })
+        .then(() => {
+          showPrinterStatus('✓ Printer connected! Ready to print.', 'success');
+        })
+        .catch(() => {
+          showPrinterStatus('✗ Printer not found. Check IP and WiFi.', 'error');
+        });
+      return;
+    }
 
     fetch(`http://${ip}:9100`, {
       method: 'POST',

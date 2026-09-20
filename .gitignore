@@ -28,3 +28,7 @@ Thumbs.db
 *.key
 *.json
 !package.json
+!capacitor.config.json
+
+# Capacitor build output (regenerated via `npm run build`)
+www/
