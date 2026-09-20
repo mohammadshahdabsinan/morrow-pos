@@ -878,6 +878,82 @@ function printReceipt(saleId) {
   const sale = state.sales.find((entry) => entry.id === saleId);
   if (!sale) return;
 
+  const printerIP = localStorage.getItem('printer-ip');
+
+  if (printerIP) {
+    printToNetworkPrinter(sale, printerIP);
+  } else {
+    printViaDialog(sale);
+  }
+}
+
+function printToNetworkPrinter(sale, printerIP) {
+  const businessName = sale.businessName || state.settings.businessName || 'Your Business Name';
+  const businessPhone = sale.businessPhone || state.settings.businessPhone || '';
+
+  let escPos = '';
+
+  escPos += '\x1b\x61\x01';
+  escPos += '\x1d\x21\x11';
+  escPos += businessName + '\n';
+  escPos += '\x1d\x21\x00';
+
+  escPos += '\n';
+  escPos += `Receipt #${String(sale.number).padStart(4, '0')}\n`;
+  escPos += `${saleDate(sale)}\n`;
+  escPos += `Payment: ${sale.paymentMethod}\n`;
+  escPos += '\x1b\x61\x00';
+
+  escPos += '\n───────────────────────\n';
+  getSaleItems(sale).forEach((item) => {
+    const qty = item.quantity;
+    const price = item.price * qty;
+    const name = item.name.substring(0, 20);
+    escPos += `${name}\n`;
+    escPos += `  ${qty} x ${formatSaleCurrency(sale, item.price)} = ${formatSaleCurrency(sale, price)}\n`;
+  });
+
+  escPos += '───────────────────────\n';
+  escPos += `Subtotal: ${formatSaleCurrency(sale, sale.subtotal || 0)}\n`;
+  if (sale.tax > 0) {
+    escPos += `${sale.taxLabel}: ${formatSaleCurrency(sale, sale.tax)}\n`;
+  }
+  escPos += '\x1d\x21\x11';
+  escPos += `Total: ${formatSaleCurrency(sale, sale.total)}\n`;
+  escPos += '\x1d\x21\x00';
+
+  escPos += '\n';
+  escPos += '\x1b\x61\x01';
+  escPos += 'Thank you!\n';
+  escPos += 'Come again soon\n';
+
+  escPos += '\n\n';
+  escPos += '\x1d\x56\x00';
+
+  sendToPrinter(printerIP, escPos);
+}
+
+function sendToPrinter(printerIP, escPosData) {
+  const url = `http://${printerIP}:9100`;
+
+  fetch(url, {
+    method: 'POST',
+    mode: 'no-cors',
+    body: escPosData
+  })
+  .then(() => {
+    console.log('✓ Sent to thermal printer');
+    alert('✓ Printing to thermal printer...');
+  })
+  .catch((error) => {
+    console.error('Printer error:', error);
+    alert('Printer not found. Using browser print instead.');
+    const sale = state.sales.find((s) => s.id === saleId);
+    if (sale) printViaDialog(sale);
+  });
+}
+
+function printViaDialog(sale) {
   const receiptWindow = window.open('', '_blank', 'width=400,height=600');
   if (!receiptWindow) {
     window.alert('Allow pop-ups to print the receipt.');
@@ -1466,6 +1542,98 @@ document.querySelector('#new-bill').addEventListener('click', () => {
 document.querySelector('#go-to-cart').addEventListener('click', () => {
   billPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
+
+// Thermal printer settings
+const printerIPInput = document.querySelector('#printer-ip-input');
+const savePrinterBtn = document.querySelector('#save-printer-btn');
+const testPrinterBtn = document.querySelector('#test-printer-btn');
+const clearPrinterBtn = document.querySelector('#clear-printer-btn');
+const printerStatusDiv = document.querySelector('#printer-status');
+
+if (printerIPInput) {
+  const savedIP = localStorage.getItem('printer-ip');
+  if (savedIP) printerIPInput.value = savedIP;
+}
+
+if (savePrinterBtn) {
+  savePrinterBtn.addEventListener('click', () => {
+    const ip = printerIPInput.value.trim();
+
+    if (!ip) {
+      showPrinterStatus('Please enter a valid IP address', 'error');
+      return;
+    }
+
+    if (!isValidIP(ip)) {
+      showPrinterStatus('Invalid IP format. Use: 192.168.1.100', 'error');
+      return;
+    }
+
+    localStorage.setItem('printer-ip', ip);
+    showPrinterStatus(`✓ Printer IP saved: ${ip}`, 'success');
+  });
+}
+
+if (testPrinterBtn) {
+  testPrinterBtn.addEventListener('click', () => {
+    const ip = printerIPInput.value.trim();
+
+    if (!ip) {
+      showPrinterStatus('Enter printer IP address first', 'error');
+      return;
+    }
+
+    showPrinterStatus('Testing connection...', 'info');
+
+    fetch(`http://${ip}:9100`, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: 'TEST\n\n'
+    })
+    .then(() => {
+      showPrinterStatus('✓ Printer connected! Ready to print.', 'success');
+    })
+    .catch(() => {
+      showPrinterStatus('✗ Printer not found. Check IP and WiFi.', 'error');
+    });
+  });
+}
+
+if (clearPrinterBtn) {
+  clearPrinterBtn.addEventListener('click', () => {
+    printerIPInput.value = '';
+    localStorage.removeItem('printer-ip');
+    showPrinterStatus('Printer IP cleared. Will use browser printing.', 'success');
+  });
+}
+
+function isValidIP(ip) {
+  const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+  if (!ipRegex.test(ip)) return false;
+  const parts = ip.split('.');
+  return parts.every(part => parseInt(part) <= 255);
+}
+
+function showPrinterStatus(message, type) {
+  if (!printerStatusDiv) return;
+
+  printerStatusDiv.textContent = message;
+  printerStatusDiv.style.display = 'block';
+
+  if (type === 'success') {
+    printerStatusDiv.style.background = '#d4edda';
+    printerStatusDiv.style.color = '#155724';
+    printerStatusDiv.style.border = '1px solid #c3e6cb';
+  } else if (type === 'error') {
+    printerStatusDiv.style.background = '#f8d7da';
+    printerStatusDiv.style.color = '#721c24';
+    printerStatusDiv.style.border = '1px solid #f5c6cb';
+  } else {
+    printerStatusDiv.style.background = '#d1ecf1';
+    printerStatusDiv.style.color = '#0c5460';
+    printerStatusDiv.style.border = '1px solid #bee5eb';
+  }
+}
 
 buildCategoryOptions();
 renderAll();

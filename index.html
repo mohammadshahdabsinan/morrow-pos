@@ -163,6 +163,53 @@
               <button type="submit">Save settings</button>
             </form>
           </div>
+
+          <div class="card-block">
+            <div class="card-head">
+              <h2>🖨️ Thermal Printer (WiFi)</h2>
+            </div>
+
+            <label style="display: block; margin-bottom: 15px;">
+              <span style="font-weight: bold; display: block; margin-bottom: 6px;">Printer IP Address</span>
+              <input
+                id="printer-ip-input"
+                type="text"
+                placeholder="e.g., 192.168.1.100"
+                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;"
+              />
+              <small style="color: #666; display: block; margin-top: 6px;">
+                🔍 Find printer IP: Press MENU on printer → Settings → Print Network Config
+              </small>
+            </label>
+
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
+              <button
+                id="test-printer-btn"
+                class="inline-btn"
+                type="button"
+              >
+                📡 Test Connection
+              </button>
+
+              <button
+                id="save-printer-btn"
+                class="inline-btn"
+                type="button"
+              >
+                ✓ Save Printer IP
+              </button>
+
+              <button
+                id="clear-printer-btn"
+                class="inline-btn"
+                type="button"
+              >
+                🗑️ Clear
+              </button>
+            </div>
+
+            <div id="printer-status" style="margin-top: 12px; padding: 10px; border-radius: 4px; display: none; font-size: 14px;"></div>
+          </div>
           </div>
 
           <div class="view-panel hidden" data-panel="tools">
