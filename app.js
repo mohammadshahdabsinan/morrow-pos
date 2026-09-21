@@ -137,6 +137,33 @@ function saveState() {
   }
 }
 
+// Shows a brief confirmation message after a save action, so it's clear
+// the action actually happened instead of the UI silently doing nothing.
+function showToast(message, type = 'success') {
+  let toast = document.querySelector('#app-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'app-toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.className = 'toast visible' + (type === 'error' ? ' error' : '');
+  clearTimeout(toast._hideTimer);
+  toast._hideTimer = setTimeout(() => toast.classList.remove('visible'), 2200);
+}
+
+// Highlights a form's submit button while there are unsaved edits, and
+// clears the highlight once the form is submitted, so it's clear whether
+// there's anything left to save.
+function trackFormDirtyState(form) {
+  const submitBtn = form?.querySelector('button[type="submit"]');
+  if (!submitBtn) return;
+  const markDirty = () => submitBtn.classList.add('has-changes');
+  form.addEventListener('input', markDirty);
+  form.addEventListener('change', markDirty);
+  form.addEventListener('submit', () => submitBtn.classList.remove('has-changes'));
+}
+
 async function syncToFirebase() {
   if (!isOnline || isSyncing || !firebaseReady) return;
 
@@ -164,8 +191,7 @@ async function syncToFirebase() {
           id: { stringValue: prod.id },
           name: { stringValue: prod.name },
           categoryId: { stringValue: prod.categoryId },
-          price: { integerValue: String(prod.price) },
-          stock: { integerValue: String(prod.stock) }
+          price: { integerValue: String(prod.price) }
         } } })) } },
         sales: { arrayValue: { values: state.sales.map(sale => ({ mapValue: { fields: {
           id: { stringValue: sale.id },
@@ -253,8 +279,7 @@ async function loadFromFirebase() {
             id: v.mapValue.fields.id.stringValue,
             name: v.mapValue.fields.name.stringValue,
             categoryId: v.mapValue.fields.categoryId.stringValue,
-            price: Number(v.mapValue.fields.price.integerValue),
-            stock: Number(v.mapValue.fields.stock.integerValue)
+            price: Number(v.mapValue.fields.price.integerValue)
           })),
           sales: parseArray(fields.sales, v => ({
             id: v.mapValue.fields.id.stringValue,
@@ -406,17 +431,6 @@ function createId(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 }
 
-function ensureProductStock(productId, requestedQty = 1) {
-  const product = getProductById(productId);
-  if (!product) return false;
-
-  const currentBillQty = state.bill
-    .filter((item) => item.productId === productId)
-    .reduce((sum, item) => sum + item.quantity, 0);
-
-  return currentBillQty + requestedQty <= product.stock;
-}
-
 function buildCategoryOptions() {
   const select = document.querySelector('#product-category');
   select.innerHTML = '';
@@ -521,8 +535,6 @@ function sortProducts(products) {
   return [...products].sort((first, second) => {
     if (productSort === 'price-asc') return first.price - second.price;
     if (productSort === 'price-desc') return second.price - first.price;
-    if (productSort === 'stock-asc') return first.stock - second.stock;
-    if (productSort === 'stock-desc') return second.stock - first.stock;
     const result = first.name.localeCompare(second.name);
     return productSort === 'name-desc' ? -result : result;
   });
@@ -570,7 +582,6 @@ function renderProducts() {
     const increase = document.createElement('button');
     increase.type = 'button';
     increase.textContent = '+';
-    increase.disabled = product.stock <= getBillQuantity(product.id);
     increase.addEventListener('click', () => updateProductQuick(product.id, 'increase'));
     quantity.append(decrease, count, increase);
 
@@ -606,11 +617,11 @@ function renderCatalogProducts() {
 
   const table = document.createElement('table');
   table.className = 'catalog-table';
-  table.innerHTML = '<thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead><tbody></tbody>';
+  table.innerHTML = '<thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Actions</th></tr></thead><tbody></tbody>';
   const body = table.querySelector('tbody');
   sortProducts(state.products).forEach((product) => {
     const row = document.createElement('tr');
-    row.innerHTML = `<td><strong>${escapeHtml(product.name)}</strong></td><td>${escapeHtml(getCategoryName(product.categoryId))}</td><td>${escapeHtml(currency(product.price))}</td><td>${product.stock}</td><td></td>`;
+    row.innerHTML = `<td><strong>${escapeHtml(product.name)}</strong></td><td>${escapeHtml(getCategoryName(product.categoryId))}</td><td>${escapeHtml(currency(product.price))}</td><td></td>`;
     const actions = row.lastElementChild;
     const editButton = document.createElement('button');
     editButton.className = 'mini-btn';
@@ -637,7 +648,6 @@ function editProduct(productId) {
   document.querySelector('#product-name').value = product.name;
   document.querySelector('#product-category').value = product.categoryId;
   document.querySelector('#product-price').value = product.price;
-  document.querySelector('#product-stock').value = product.stock;
   document.querySelector('#product-submit-button').textContent = 'Update product';
   form.classList.remove('hidden');
   document.querySelector('#product-name').focus();
@@ -732,17 +742,6 @@ function addToBill(productId) {
   const product = getProductById(productId);
   if (!product) return;
 
-  if (product.stock <= 0) {
-    window.alert('This product is out of stock.');
-    return;
-  }
-
-  const existingQty = state.bill.find((item) => item.productId === productId)?.quantity || 0;
-  if (existingQty + 1 > product.stock) {
-    window.alert(`Only ${product.stock} item(s) remain in stock.`);
-    return;
-  }
-
   const existing = state.bill.find((item) => item.productId === productId);
   if (existing) {
     existing.quantity += 1;
@@ -759,10 +758,6 @@ function updateBillItem(id, action) {
   if (!item) return;
 
   if (action === 'increase') {
-    if (!item.custom && !ensureProductStock(item.productId, 1)) {
-      window.alert('There is not enough stock for another item.');
-      return;
-    }
     item.quantity += 1;
   }
   if (action === 'decrease') item.quantity -= 1;
@@ -1180,26 +1175,8 @@ function printViaDialog(sale) {
 function completeSale() {
   if (!state.bill.length) return;
 
-  const stockIssue = state.bill.some((item) => {
-    if (item.custom) return false;
-    const product = getProductById(item.productId);
-    return product && item.quantity > product.stock;
-  });
-
-  if (stockIssue) {
-    window.alert('Stock does not allow this sale. Reduce quantities and try again.');
-    return;
-  }
-
   const { subtotal, tax, total } = getCurrentTotals();
   const saleNumber = state.sales.length + 1;
-
-  state.bill.forEach((item) => {
-    if (item.custom) return;
-    const product = getProductById(item.productId);
-    if (!product) return;
-    product.stock = Math.max(0, product.stock - item.quantity);
-  });
 
   const statusChoice = window.confirm('Did the payment succeed?\n\nOK = Paid\nCancel = Pending/Failed');
   const status = statusChoice ? 'Paid' : '';
@@ -1319,6 +1296,7 @@ settingsForm.addEventListener('submit', (event) => {
 
   saveState();
   renderAll();
+  showToast('✓ Settings saved');
 });
 
 document.querySelector('#export-data').addEventListener('click', () => {
@@ -1382,7 +1360,10 @@ categoryForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const nameInput = document.querySelector('#category-name');
   const value = nameInput.value.trim();
-  if (!value) return;
+  if (!value) {
+    showToast('Enter a category name', 'error');
+    return;
+  }
 
   state.categories.push({ id: createId('cat'), name: value });
   nameInput.value = '';
@@ -1390,6 +1371,7 @@ categoryForm.addEventListener('submit', (event) => {
   buildCategoryOptions();
   renderAll();
   categoryForm.classList.add('hidden');
+  showToast('✓ Category saved');
 });
 
 customItemForm.addEventListener('submit', (event) => {
@@ -1410,9 +1392,11 @@ productForm.addEventListener('submit', (event) => {
   const name = document.querySelector('#product-name').value.trim();
   const categoryId = document.querySelector('#product-category').value;
   const price = Number(document.querySelector('#product-price').value);
-  const stock = Number(document.querySelector('#product-stock').value);
 
-  if (!name || !categoryId || !price || price <= 0) return;
+  if (!name || !categoryId || !price || price <= 0) {
+    showToast('Enter a name, category, and valid price', 'error');
+    return;
+  }
 
   if (productId) {
     const match = state.products.find((product) => product.id === productId);
@@ -1420,15 +1404,13 @@ productForm.addEventListener('submit', (event) => {
       match.name = name;
       match.categoryId = categoryId;
       match.price = price;
-      match.stock = Math.max(0, stock);
     }
   } else {
     state.products.push({
       id: createId('prod'),
       name,
       categoryId,
-      price,
-      stock: Math.max(0, stock)
+      price
     });
   }
 
@@ -1436,10 +1418,10 @@ productForm.addEventListener('submit', (event) => {
   document.querySelector('#product-id').value = '';
   document.querySelector('#product-submit-button').textContent = 'Add product';
   document.querySelector('#product-price').value = '100';
-  document.querySelector('#product-stock').value = '0';
   saveState();
   renderAll();
   productForm.classList.add('hidden');
+  showToast(productId ? '✓ Product updated' : '✓ Product added');
 });
 
 searchInput.addEventListener('input', (event) => {
@@ -1720,6 +1702,10 @@ async function savePrinterIPToFirebase(ip) {
 if (printerIPInput) {
   // Initialize printer IP load (don't block page load)
   loadPrinterIP().catch(err => console.error('Failed to load printer IP:', err));
+
+  if (savePrinterBtn) {
+    printerIPInput.addEventListener('input', () => savePrinterBtn.classList.add('has-changes'));
+  }
 }
 
 if (savePrinterBtn) {
@@ -1728,17 +1714,21 @@ if (savePrinterBtn) {
 
     if (!ip) {
       showPrinterStatus('Please enter a valid IP address', 'error');
+      showToast('Enter a valid IP address', 'error');
       return;
     }
 
     if (!isValidIP(ip)) {
       showPrinterStatus('Invalid IP format. Use: 192.168.1.100', 'error');
+      showToast('Invalid IP format', 'error');
       return;
     }
 
     localStorage.setItem('printer-ip', ip);
     await savePrinterIPToFirebase(ip);
+    savePrinterBtn.classList.remove('has-changes');
     showPrinterStatus(`✓ Printer IP saved: ${ip}`, 'success');
+    showToast('✓ Printer IP saved');
   });
 }
 
@@ -1818,6 +1808,10 @@ function showPrinterStatus(message, type) {
 buildCategoryOptions();
 renderAll();
 setView(currentView);
+
+trackFormDirtyState(settingsForm);
+trackFormDirtyState(productForm);
+trackFormDirtyState(categoryForm);
 
 // Initialize Firebase sync on startup
 (async () => {
