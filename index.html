@@ -54,7 +54,7 @@
             <div class="card-head row-split">
               <h2>Items</h2>
               <div class="header-controls">
-                <label class="compact-select">Sort <select id="dashboard-product-sort"><option value="name-asc">Name A-Z</option><option value="name-desc">Name Z-A</option><option value="price-asc">Price low-high</option><option value="price-desc">Price high-low</option><option value="stock-asc">Stock low-high</option><option value="stock-desc">Stock high-low</option></select></label>
+                <label class="compact-select">Sort <select id="dashboard-product-sort"><option value="name-asc">Name A-Z</option><option value="name-desc">Name Z-A</option><option value="price-asc">Price low-high</option><option value="price-desc">Price high-low</option></select></label>
                 <div class="header-actions">
                   <button class="inline-btn" id="go-to-cart" type="button">Go to cart</button>
                   <button class="inline-btn" id="sell-catalog-link" data-view="catalog" type="button">Manage catalog</button>
@@ -88,7 +88,7 @@
             <div class="card-head row-split">
               <h2>Products</h2>
               <div class="header-controls">
-                <label class="compact-select">Sort <select id="catalog-product-sort"><option value="name-asc">Name A-Z</option><option value="name-desc">Name Z-A</option><option value="price-asc">Price low-high</option><option value="price-desc">Price high-low</option><option value="stock-asc">Stock low-high</option><option value="stock-desc">Stock high-low</option></select></label>
+                <label class="compact-select">Sort <select id="catalog-product-sort"><option value="name-asc">Name A-Z</option><option value="name-desc">Name Z-A</option><option value="price-asc">Price low-high</option><option value="price-desc">Price high-low</option></select></label>
                 <button class="inline-btn" id="toggle-product-form" type="button">+ Add item</button>
               </div>
             </div>
@@ -107,10 +107,6 @@
                 <label>
                   <span>Price</span>
                   <input id="product-price" type="number" min="1" step="1" required value="100" />
-                </label>
-                <label>
-                  <span>Stock</span>
-                  <input id="product-stock" type="number" min="0" step="1" value="0" placeholder="Optional" />
                 </label>
               </div>
               <button id="product-submit-button" type="submit">Add product</button>
@@ -200,7 +196,7 @@
 
               <button
                 id="save-printer-btn"
-                class="inline-btn"
+                class="primary-btn"
                 type="button"
               >
                 ✓ Save Printer IP
