@@ -57,6 +57,9 @@ let searchText = '';
 let filterDateRange = 'all';
 let filterPaymentMethod = '';
 let filterStatus = '';
+let selectedFilterDate = null; // null = all time, otherwise specific date (YYYY-MM-DD)
+const transactionCache = {}; // cache for filtered results: { "2026-09-23": [...transactions] }
+const CACHE_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 const categoryList = document.querySelector('#category-list');
 const dashboardCategoryList = document.querySelector('#dashboard-category-list');
@@ -102,6 +105,7 @@ const salesHistory = document.querySelector('#sales-history');
 const salesFilter = document.querySelector('#sales-filter');
 const paymentMethodFilter = document.querySelector('#payment-method-filter');
 const transactionStatusFilter = document.querySelector('#transaction-status-filter');
+const filterDatePicker = document.querySelector('#filter-date-picker');
 const importDataInput = document.querySelector('#import-data');
 
 // Stat card elements
@@ -813,7 +817,17 @@ function saleDate(sale) {
 function getFilteredSales() {
   const today = new Date().toDateString();
   return state.sales.filter((sale) => {
-    const dateMatch = filterDateRange !== 'today' || new Date(sale.createdAt).toDateString() === today;
+    // Date filtering: support 'all time', 'today', or specific selected date
+    let dateMatch = true;
+    if (selectedFilterDate) {
+      // Specific date selected
+      dateMatch = new Date(sale.createdAt).toDateString() === new Date(selectedFilterDate).toDateString();
+    } else if (filterDateRange === 'today') {
+      // Today only
+      dateMatch = new Date(sale.createdAt).toDateString() === today;
+    }
+    // filterDateRange === 'all' means all time, so dateMatch stays true
+
     const paymentMatch = !filterPaymentMethod || sale.paymentMethod === filterPaymentMethod;
     const statusMatch = !filterStatus || sale.status === filterStatus;
     return dateMatch && paymentMatch && statusMatch;
@@ -823,15 +837,30 @@ function getFilteredSales() {
 function renderTransactionStats() {
   const filteredSales = getFilteredSales();
   const today = new Date().toDateString();
-  const todaySales = state.sales.filter(s => new Date(s.createdAt).toDateString() === today);
+  // Only count "Paid" transactions in totals (exclude Pending, Failed, Wrong Bill)
+  const paidSales = state.sales.filter(s => s.status === 'Paid');
+  const paidToday = paidSales.filter(s => new Date(s.createdAt).toDateString() === today);
+  const paidSelectedDate = selectedFilterDate ? paidSales.filter(s => new Date(s.createdAt).toDateString() === new Date(selectedFilterDate).toDateString()) : [];
 
-  const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
-  const todayRevenue = todaySales.reduce((sum, sale) => sum + sale.total, 0);
+  const totalRevenue = paidSales.reduce((sum, sale) => sum + sale.total, 0);
+  const todayRevenue = paidToday.reduce((sum, sale) => sum + sale.total, 0);
+  const selectedDateRevenue = paidSelectedDate.reduce((sum, sale) => sum + sale.total, 0);
 
-  if (statTotalSales) statTotalSales.textContent = String(state.sales.length);
-  if (statTotalRevenue) statTotalRevenue.textContent = currency(state.sales.reduce((sum, s) => sum + s.total, 0));
-  if (statTodaySales) statTodaySales.textContent = String(todaySales.length);
+  // All-time totals (only paid transactions)
+  if (statTotalSales) statTotalSales.textContent = String(paidSales.length);
+  if (statTotalRevenue) statTotalRevenue.textContent = currency(totalRevenue);
+
+  // Today's totals (only paid transactions)
+  if (statTodaySales) statTodaySales.textContent = String(paidToday.length);
   if (statTodayRevenue) statTodayRevenue.textContent = currency(todayRevenue);
+
+  // Selected date totals (only paid transactions)
+  const statSelectedDateSales = document.querySelector('#stat-selected-date-sales');
+  const statSelectedDateRevenue = document.querySelector('#stat-selected-date-revenue');
+  if (selectedFilterDate) {
+    if (statSelectedDateSales) statSelectedDateSales.textContent = String(paidSelectedDate.length);
+    if (statSelectedDateRevenue) statSelectedDateRevenue.textContent = currency(selectedDateRevenue);
+  }
 }
 
 function renderSalesHistory() {
@@ -852,18 +881,23 @@ function renderSalesHistory() {
     const row = document.createElement('div');
     row.className = 'sale-row';
     const itemCount = getSaleItems(sale).reduce((sum, item) => sum + item.quantity, 0);
-    const statusBadge = sale.status ? `<span style="font-size:0.8rem;padding:2px 8px;border-radius:4px;background:${sale.status === 'Paid' ? '#e8f5e9' : sale.status === 'Pending' ? '#fff3cd' : '#ffebee'};color:${sale.status === 'Paid' ? '#2e7d32' : sale.status === 'Pending' ? '#856404' : '#c62828'}">${sale.status}</span>` : '';
     const reasonText = sale.reason ? `<div style="font-size:0.85rem;color:#666;margin-top:4px">💬 ${escapeHtml(sale.reason)}</div>` : '';
 
     row.innerHTML = `
       <div>
         <strong>Sale #${String(sale.number || '').padStart(4, '0')}</strong>
-        <span>${escapeHtml(saleDate(sale))} · ${escapeHtml(sale.paymentMethod)} ${statusBadge}</span>
+        <span>${escapeHtml(saleDate(sale))} · ${escapeHtml(sale.paymentMethod)}</span>
         ${reasonText}
       </div>
       <div class="sale-row-meta">
         <span>${itemCount} item${itemCount === 1 ? '' : 's'}</span>
         <strong>${escapeHtml(formatSaleCurrency(sale, sale.total))}</strong>
+        <select class="sale-status-select" data-sale-id="${sale.id}" style="padding:6px 8px;border:1px solid #ddd;border-radius:4px;font-size:0.85rem;background:white">
+          <option value="Paid" ${sale.status === 'Paid' ? 'selected' : ''}>Paid</option>
+          <option value="Pending" ${sale.status === 'Pending' ? 'selected' : ''}>Pending</option>
+          <option value="Failed" ${sale.status === 'Failed' ? 'selected' : ''}>Failed</option>
+          <option value="Wrong Bill" ${sale.status === 'Wrong Bill' ? 'selected' : ''}>Wrong Bill</option>
+        </select>
         <button class="mini-btn" type="button" data-receipt-id="${sale.id}">Receipt</button>
       </div>
     `;
@@ -872,6 +906,20 @@ function renderSalesHistory() {
 
   salesHistory.querySelectorAll('[data-receipt-id]').forEach((button) => {
     button.addEventListener('click', () => printReceipt(button.dataset.receiptId));
+  });
+
+  // Add listeners to status selectors
+  salesHistory.querySelectorAll('.sale-status-select').forEach((select) => {
+    select.addEventListener('change', () => {
+      const saleId = select.dataset.saleId;
+      const sale = state.sales.find(s => s.id === saleId);
+      if (sale) {
+        sale.status = select.value;
+        saveState();
+        renderTransactionStats();
+        renderSalesHistory();
+      }
+    });
   });
 }
 
@@ -1340,6 +1388,11 @@ importDataInput.addEventListener('change', async () => {
 
 salesFilter.addEventListener('change', () => {
   filterDateRange = salesFilter.value;
+  // Clear date picker when switching to preset ranges
+  filterDatePicker.value = '';
+  selectedFilterDate = null;
+  document.querySelector('#selected-date-card').style.display = 'none';
+  document.querySelector('#selected-date-revenue-card').style.display = 'none';
   renderTransactionStats();
   renderSalesHistory();
 });
@@ -1352,6 +1405,25 @@ paymentMethodFilter.addEventListener('change', () => {
 
 transactionStatusFilter.addEventListener('change', () => {
   filterStatus = transactionStatusFilter.value;
+  renderTransactionStats();
+  renderSalesHistory();
+});
+
+filterDatePicker.addEventListener('change', () => {
+  const selectedDate = filterDatePicker.value;
+  if (selectedDate) {
+    selectedFilterDate = selectedDate;
+    // Show selected date stat cards
+    document.querySelector('#selected-date-card').style.display = '';
+    document.querySelector('#selected-date-revenue-card').style.display = '';
+    const dateLabel = document.querySelector('#selected-date-label');
+    if (dateLabel) dateLabel.textContent = new Date(selectedDate).toLocaleDateString();
+  } else {
+    selectedFilterDate = null;
+    // Hide selected date stat cards
+    document.querySelector('#selected-date-card').style.display = 'none';
+    document.querySelector('#selected-date-revenue-card').style.display = 'none';
+  }
   renderTransactionStats();
   renderSalesHistory();
 });

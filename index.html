@@ -255,6 +255,16 @@
               <div class="stat-value" id="stat-today-revenue">Rs 0</div>
               <div class="stat-subtitle">today</div>
             </div>
+            <div class="stat-card" id="selected-date-card" style="display:none">
+              <div class="stat-label">Selected Date Sales</div>
+              <div class="stat-value" id="stat-selected-date-sales">0</div>
+              <div class="stat-subtitle" id="selected-date-label">selected</div>
+            </div>
+            <div class="stat-card" id="selected-date-revenue-card" style="display:none">
+              <div class="stat-label">Selected Date Revenue</div>
+              <div class="stat-value" id="stat-selected-date-revenue">Rs 0</div>
+              <div class="stat-subtitle">selected</div>
+            </div>
           </div>
 
           <div class="card-block">
@@ -271,6 +281,7 @@
                 <option value="all">All time</option>
                 <option value="today">Today</option>
               </select>
+              <input id="filter-date-picker" type="date" style="padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:0.9rem" />
               <select id="payment-method-filter" class="sales-filter" aria-label="Filter by payment method">
                 <option value="">All payment methods</option>
                 <option value="Cash">Cash</option>
