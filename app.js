@@ -837,26 +837,28 @@ function getFilteredSales() {
 function renderTransactionStats() {
   const filteredSales = getFilteredSales();
   const today = new Date().toDateString();
-  const todaySales = state.sales.filter(s => new Date(s.createdAt).toDateString() === today);
-  const selectedDateSales = selectedFilterDate ? state.sales.filter(s => new Date(s.createdAt).toDateString() === new Date(selectedFilterDate).toDateString()) : [];
+  // Only count "Paid" transactions in totals (exclude Pending, Failed, Wrong Bill)
+  const paidSales = state.sales.filter(s => s.status === 'Paid');
+  const paidToday = paidSales.filter(s => new Date(s.createdAt).toDateString() === today);
+  const paidSelectedDate = selectedFilterDate ? paidSales.filter(s => new Date(s.createdAt).toDateString() === new Date(selectedFilterDate).toDateString()) : [];
 
-  const totalRevenue = state.sales.reduce((sum, sale) => sum + sale.total, 0);
-  const todayRevenue = todaySales.reduce((sum, sale) => sum + sale.total, 0);
-  const selectedDateRevenue = selectedDateSales.reduce((sum, sale) => sum + sale.total, 0);
+  const totalRevenue = paidSales.reduce((sum, sale) => sum + sale.total, 0);
+  const todayRevenue = paidToday.reduce((sum, sale) => sum + sale.total, 0);
+  const selectedDateRevenue = paidSelectedDate.reduce((sum, sale) => sum + sale.total, 0);
 
-  // All-time totals (always show)
-  if (statTotalSales) statTotalSales.textContent = String(state.sales.length);
+  // All-time totals (only paid transactions)
+  if (statTotalSales) statTotalSales.textContent = String(paidSales.length);
   if (statTotalRevenue) statTotalRevenue.textContent = currency(totalRevenue);
 
-  // Today's totals (always show)
-  if (statTodaySales) statTodaySales.textContent = String(todaySales.length);
+  // Today's totals (only paid transactions)
+  if (statTodaySales) statTodaySales.textContent = String(paidToday.length);
   if (statTodayRevenue) statTodayRevenue.textContent = currency(todayRevenue);
 
-  // Selected date totals (show if a specific date is selected)
+  // Selected date totals (only paid transactions)
   const statSelectedDateSales = document.querySelector('#stat-selected-date-sales');
   const statSelectedDateRevenue = document.querySelector('#stat-selected-date-revenue');
   if (selectedFilterDate) {
-    if (statSelectedDateSales) statSelectedDateSales.textContent = String(selectedDateSales.length);
+    if (statSelectedDateSales) statSelectedDateSales.textContent = String(paidSelectedDate.length);
     if (statSelectedDateRevenue) statSelectedDateRevenue.textContent = currency(selectedDateRevenue);
   }
 }
@@ -879,18 +881,23 @@ function renderSalesHistory() {
     const row = document.createElement('div');
     row.className = 'sale-row';
     const itemCount = getSaleItems(sale).reduce((sum, item) => sum + item.quantity, 0);
-    const statusBadge = sale.status ? `<span style="font-size:0.8rem;padding:2px 8px;border-radius:4px;background:${sale.status === 'Paid' ? '#e8f5e9' : sale.status === 'Pending' ? '#fff3cd' : '#ffebee'};color:${sale.status === 'Paid' ? '#2e7d32' : sale.status === 'Pending' ? '#856404' : '#c62828'}">${sale.status}</span>` : '';
     const reasonText = sale.reason ? `<div style="font-size:0.85rem;color:#666;margin-top:4px">💬 ${escapeHtml(sale.reason)}</div>` : '';
 
     row.innerHTML = `
       <div>
         <strong>Sale #${String(sale.number || '').padStart(4, '0')}</strong>
-        <span>${escapeHtml(saleDate(sale))} · ${escapeHtml(sale.paymentMethod)} ${statusBadge}</span>
+        <span>${escapeHtml(saleDate(sale))} · ${escapeHtml(sale.paymentMethod)}</span>
         ${reasonText}
       </div>
       <div class="sale-row-meta">
         <span>${itemCount} item${itemCount === 1 ? '' : 's'}</span>
         <strong>${escapeHtml(formatSaleCurrency(sale, sale.total))}</strong>
+        <select class="sale-status-select" data-sale-id="${sale.id}" style="padding:6px 8px;border:1px solid #ddd;border-radius:4px;font-size:0.85rem;background:white">
+          <option value="Paid" ${sale.status === 'Paid' ? 'selected' : ''}>Paid</option>
+          <option value="Pending" ${sale.status === 'Pending' ? 'selected' : ''}>Pending</option>
+          <option value="Failed" ${sale.status === 'Failed' ? 'selected' : ''}>Failed</option>
+          <option value="Wrong Bill" ${sale.status === 'Wrong Bill' ? 'selected' : ''}>Wrong Bill</option>
+        </select>
         <button class="mini-btn" type="button" data-receipt-id="${sale.id}">Receipt</button>
       </div>
     `;
@@ -899,6 +906,20 @@ function renderSalesHistory() {
 
   salesHistory.querySelectorAll('[data-receipt-id]').forEach((button) => {
     button.addEventListener('click', () => printReceipt(button.dataset.receiptId));
+  });
+
+  // Add listeners to status selectors
+  salesHistory.querySelectorAll('.sale-status-select').forEach((select) => {
+    select.addEventListener('change', () => {
+      const saleId = select.dataset.saleId;
+      const sale = state.sales.find(s => s.id === saleId);
+      if (sale) {
+        sale.status = select.value;
+        saveState();
+        renderTransactionStats();
+        renderSalesHistory();
+      }
+    });
   });
 }
 
