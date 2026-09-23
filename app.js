@@ -355,17 +355,17 @@ async function downloadFile(filename, content, type) {
         return;
       }
 
-      const writeResult = await Filesystem.writeFile({
+      await Filesystem.writeFile({
         path: filename,
         data: content,
-        directory: 'Documents'
+        directory: 1  // 1 = ExternalStorage (accessible via Downloads/file manager)
       });
 
-      alert(`✓ File saved: ${filename}`);
-      console.log('File saved:', writeResult);
+      alert(`✓ File saved to Downloads:\n${filename}\n\nOpen your file manager or Downloads app to find it.`);
+      console.log('File saved:', filename);
     } catch (err) {
       console.error('Export error:', err);
-      alert(`Export failed: ${err.message}`);
+      alert(`Export failed: ${err.message}\n\nTry saving to Downloads instead.`);
     }
   } else {
     // Browser: standard download
