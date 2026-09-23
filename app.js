@@ -355,17 +355,29 @@ async function downloadFile(filename, content, type) {
         return;
       }
 
+      // Try to create directory first (if needed)
+      try {
+        await Filesystem.mkdir({
+          path: 'Xtra-Zone-Billing',
+          directory: 1,  // ExternalStorage
+          recursive: true
+        });
+      } catch (err) {
+        console.log('Directory may already exist:', err.message);
+      }
+
+      // Now save file in the directory
       await Filesystem.writeFile({
-        path: filename,
+        path: `Xtra-Zone-Billing/${filename}`,
         data: content,
-        directory: 1  // 1 = ExternalStorage (accessible via Downloads/file manager)
+        directory: 1  // ExternalStorage (Downloads or public storage)
       });
 
-      alert(`✓ File saved to Downloads:\n${filename}\n\nOpen your file manager or Downloads app to find it.`);
+      alert(`✓ File saved:\n${filename}\n\nOpen your Downloads or Files app.\nLook for "Xtra-Zone-Billing" folder.`);
       console.log('File saved:', filename);
     } catch (err) {
       console.error('Export error:', err);
-      alert(`Export failed: ${err.message}\n\nTry saving to Downloads instead.`);
+      alert(`Export failed: ${err.message}`);
     }
   } else {
     // Browser: standard download
