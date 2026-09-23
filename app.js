@@ -345,14 +345,38 @@ function updateSyncStatus() {
   }
 }
 
-function downloadFile(filename, content, type) {
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
+async function downloadFile(filename, content, type) {
+  if (isNativeApp()) {
+    // Native app: use Capacitor filesystem
+    try {
+      const Filesystem = window.Capacitor?.Plugins?.Filesystem;
+      if (!Filesystem) {
+        alert('Filesystem plugin not available');
+        return;
+      }
+
+      const writeResult = await Filesystem.writeFile({
+        path: filename,
+        data: content,
+        directory: 'Documents'
+      });
+
+      alert(`✓ File saved: ${filename}`);
+      console.log('File saved:', writeResult);
+    } catch (err) {
+      console.error('Export error:', err);
+      alert(`Export failed: ${err.message}`);
+    }
+  } else {
+    // Browser: standard download
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 }
 
 function escapeHtml(value) {
@@ -1052,20 +1076,30 @@ function sendToPrinter(printerIP, escPosData, sale) {
     return;
   }
 
+  // Browser: try thermal first, fall back to browser print
+  // Note: HTTPS → HTTP requests are blocked by browsers, so this may fail on HTTPS sites
   const url = `http://${printerIP}:9100`;
+  let timeoutId = setTimeout(() => {
+    console.warn('Thermal printer timeout, falling back to browser print');
+    alert('Thermal printer not responding. Using browser print instead.');
+    if (sale) printViaDialog(sale);
+  }, 3000);
 
   fetch(url, {
     method: 'POST',
     mode: 'no-cors',
-    body: escPosData
+    body: escPosData,
+    signal: AbortSignal.timeout(3000)
   })
   .then(() => {
+    clearTimeout(timeoutId);
     console.log('✓ Sent to thermal printer');
     alert('✓ Printing to thermal printer...');
   })
   .catch((error) => {
-    console.error('Printer error:', error);
-    alert('Printer not found. Using browser print instead.');
+    clearTimeout(timeoutId);
+    console.warn('Thermal printer failed, falling back to browser print:', error);
+    alert('Thermal printer not available. Using browser print instead.');
     if (sale) printViaDialog(sale);
   });
 }
@@ -1827,16 +1861,25 @@ if (testPrinterBtn) {
       return;
     }
 
+    // Browser: test with timeout
+    let timeoutId = setTimeout(() => {
+      showPrinterStatus('✗ Printer not responding (timeout). Check IP and WiFi.', 'error');
+    }, 3000);
+
     fetch(`http://${ip}:9100`, {
       method: 'POST',
       mode: 'no-cors',
-      body: 'TEST\n\n'
+      body: 'TEST\n\n',
+      signal: AbortSignal.timeout(3000)
     })
     .then(() => {
+      clearTimeout(timeoutId);
       showPrinterStatus('✓ Printer connected! Ready to print.', 'success');
     })
-    .catch(() => {
-      showPrinterStatus('✗ Printer not found. Check IP and WiFi.', 'error');
+    .catch((err) => {
+      clearTimeout(timeoutId);
+      console.warn('Printer test failed:', err);
+      showPrinterStatus('✗ Printer not found. Check IP and WiFi. (Note: Website may need app for thermal printing)', 'error');
     });
   });
 }
