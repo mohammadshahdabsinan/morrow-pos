@@ -179,7 +179,8 @@ async function syncToFirebase() {
   updateSyncStatus();
 
   try {
-    const url = `${FIRESTORE_API_URL}/${firebaseConfig.projectId}/databases/(default)/documents/${FIREBASE_COLLECTION}/${SHOP_ID}?key=${firebaseConfig.apiKey}`;
+    const updateMask = 'updateMask.fieldPaths=settings&updateMask.fieldPaths=categories&updateMask.fieldPaths=products&updateMask.fieldPaths=sales&updateMask.fieldPaths=lastSyncedAt&updateMask.fieldPaths=deviceId';
+    const url = `${FIRESTORE_API_URL}/${firebaseConfig.projectId}/databases/(default)/documents/${FIREBASE_COLLECTION}/${SHOP_ID}?key=${firebaseConfig.apiKey}&${updateMask}`;
 
     const docData = {
       fields: {
@@ -1753,7 +1754,7 @@ async function savePrinterIPToFirebase(ip) {
   const docPath = `${FIRESTORE_API_URL}/${firebaseConfig.projectId}/databases/(default)/documents/${FIREBASE_COLLECTION}/${SHOP_ID}`;
 
   try {
-    const response = await fetch(`${docPath}?key=${firebaseConfig.apiKey}`, {
+    const response = await fetch(`${docPath}?key=${firebaseConfig.apiKey}&updateMask.fieldPaths=printerIP`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
